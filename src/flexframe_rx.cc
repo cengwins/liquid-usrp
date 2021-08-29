@@ -213,7 +213,7 @@ int main (int argc, char **argv)
         size_t num_rx_samps = usrp->get_device()->recv(
             &buff.front(), buff.size(), md,
             uhd::io_type_t::COMPLEX_FLOAT32,
-            uhd::device::RECV_MODE_ONE_PACKET
+            uhd::device::recv_mode_t::RECV_MODE_ONE_PACKET
         );
 
         // 'handle' the error codes

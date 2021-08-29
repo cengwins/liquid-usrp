@@ -404,7 +404,7 @@ void * multichanneltxrx_tx_worker(void * _arg)
 {
     // type cast input argument as multichanneltxrx object
     multichanneltxrx * txcvr = (multichanneltxrx*) _arg;
-
+    uhd::stream_args_t stream_args("fc32"); //complex floats
     unsigned int i;
 
     // buffer to hold filterbank channels
@@ -465,11 +465,8 @@ void * multichanneltxrx_tx_worker(void * _arg)
                     usrp_sample_counter=0;
 
                     // send the result to the USRP
-                    txcvr->usrp_tx->get_device()->send(
-                        &usrp_buffer.front(), usrp_buffer.size(), md,
-                        uhd::io_type_t::COMPLEX_FLOAT32,
-                        uhd::device::SEND_MODE_FULL_BUFF
-                    );
+                    txcvr->usrp_tx->get_device()->get_tx_stream(stream_args)->send(
+                        &usrp_buffer.front(), usrp_buffer.size(), md);
                 }
             }
 
@@ -478,19 +475,15 @@ void * multichanneltxrx_tx_worker(void * _arg)
         // send a few extra samples to the device
         // NOTE: this seems necessary to preserve last OFDM symbol in
         //       frame from corruption
-        txcvr->usrp_tx->get_device()->send(
-            &usrp_buffer.front(), usrp_buffer.size(), md,
-            uhd::io_type_t::COMPLEX_FLOAT32,
-            uhd::device::SEND_MODE_FULL_BUFF
+        txcvr->usrp_tx->get_device()->get_tx_stream(stream_args)->send(
+            &usrp_buffer.front(), usrp_buffer.size(), md
         );
         
         // send a mini EOB packet
         md.start_of_burst = false;
         md.end_of_burst   = true;
 
-        txcvr->usrp_tx->get_device()->send("", 0, md,
-            uhd::io_type_t::COMPLEX_FLOAT32,
-            uhd::device::SEND_MODE_FULL_BUFF
+        txcvr->usrp_tx->get_device()->get_tx_stream(stream_args)->send("", 0, md
         );
         dprintf("tx_worker finished running\n");
     }
@@ -542,11 +535,17 @@ void * multichanneltxrx_rx_worker(void * _arg)
 {
     // type cast input argument as multichanneltxrx object
     multichanneltxrx * txcvr = (multichanneltxrx*) _arg;
-
+    // 1. Create the stream args object and initialize the data formats to fc32 and sc16:
+    uhd::stream_args_t stream_args("fc32", "sc16");
+    // 2. Set the channel list, we want 3 streamers coming from channels
+    //    0, 1 and 2, in that order:
+    //stream_args.channels = {0, 1, 2};
+    // 3. Set optional args:
+    //stream_args.args["spp"] = "200"; // 200 samples per packet
     // set up receive buffer
-    const size_t max_samps_per_packet = txcvr->usrp_rx->get_device()->get_max_recv_samps_per_packet();
+    const size_t max_samps_per_packet = txcvr->usrp_rx->get_device()->get_rx_stream(stream_args)->get_max_num_samps();
     std::vector<std::complex<float> > buffer(max_samps_per_packet);
-
+    stream_args.args["spp"] = max_samps_per_packet;
     // receiver metadata object
     uhd::rx_metadata_t md;
 
@@ -577,10 +576,10 @@ void * multichanneltxrx_rx_worker(void * _arg)
 
             // grab data from device
             //dprintf("rx_worker waiting for samples...\n");
-            size_t num_rx_samps = txcvr->usrp_rx->get_device()->recv(
+            size_t num_rx_samps = txcvr->usrp_rx->get_device()->get_rx_stream(stream_args)->recv(
                 &buffer.front(), buffer.size(), md,
-                uhd::io_type_t::COMPLEX_FLOAT32,
-                uhd::device::RECV_MODE_ONE_PACKET
+                0.1,
+                true
             );
             //dprintf("rx_worker processing samples...\n");
 

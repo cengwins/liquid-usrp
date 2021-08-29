@@ -306,7 +306,7 @@ void ofdmtxrx::transmit_packet(unsigned char * _header,
     metadata_tx.end_of_burst   = false; // 
     metadata_tx.has_time_spec  = false; // set to false to send immediately
     //TODO: flush buffers
-
+    uhd::stream_args_t stream_args("fc32"); //complex floats
     // vector buffer to send data to device
     std::vector<std::complex<float> > usrp_buffer(fgbuffer_len);
 
@@ -332,33 +332,24 @@ void ofdmtxrx::transmit_packet(unsigned char * _header,
             usrp_buffer[i] = fgbuffer[i] * tx_gain;
 
         // send samples to the device
-        usrp_tx->get_device()->send(
+        usrp_tx->get_device()->get_tx_stream(stream_args)->send(
             &usrp_buffer.front(), usrp_buffer.size(),
-            metadata_tx,
-            uhd::io_type_t::COMPLEX_FLOAT32,
-            uhd::device::SEND_MODE_FULL_BUFF
-        );
+            metadata_tx);
 
     } // while loop
 
     // send a few extra samples to the device
     // NOTE: this seems necessary to preserve last OFDM symbol in
     //       frame from corruption
-    usrp_tx->get_device()->send(
+    usrp_tx->get_device()->get_tx_stream(stream_args)->send(
         &usrp_buffer.front(), usrp_buffer.size(),
-        metadata_tx,
-        uhd::io_type_t::COMPLEX_FLOAT32,
-        uhd::device::SEND_MODE_FULL_BUFF
-    );
+        metadata_tx);
     
     // send a mini EOB packet
     metadata_tx.start_of_burst = false;
     metadata_tx.end_of_burst   = true;
 
-    usrp_tx->get_device()->send("", 0, metadata_tx,
-        uhd::io_type_t::COMPLEX_FLOAT32,
-        uhd::device::SEND_MODE_FULL_BUFF
-    );
+    usrp_tx->get_device()->get_tx_stream(stream_args)->send("", 0, metadata_tx);
 
 }
 
@@ -384,7 +375,9 @@ void ofdmtxrx::assemble_frame(unsigned char * _header,
 // Returns true if last symbol.
 bool ofdmtxrx::write_symbol()
 {
-    return ofdmflexframegen_writesymbol(fg, fgbuffer);
+    bool last_symbol=false;
+    last_symbol= ofdmflexframegen_write(fg, fgbuffer, 1);
+    return last_symbol;
 }
 
 // update payload data on a particular channel
@@ -392,7 +385,7 @@ void ofdmtxrx::transmit_symbol()
 {
     // vector buffer to send data to device
     std::vector<std::complex<float> > usrp_buffer(fgbuffer_len);
-
+    uhd::stream_args_t stream_args("fc32"); //complex floats
     // generate a single OFDM frame
     //bool last_symbol=false;
     unsigned int i;
@@ -406,12 +399,9 @@ void ofdmtxrx::transmit_symbol()
             usrp_buffer[i] = fgbuffer[i] * tx_gain;
 
         // send samples to the device
-        usrp_tx->get_device()->send(
+        usrp_tx->get_device()->get_tx_stream(stream_args)->send(
             &usrp_buffer.front(), usrp_buffer.size(),
-            metadata_tx,
-            uhd::io_type_t::COMPLEX_FLOAT32,
-            uhd::device::SEND_MODE_FULL_BUFF
-        );
+            metadata_tx);
 
     //} // while loop
 
@@ -421,7 +411,7 @@ void ofdmtxrx::end_transmit_frame()
 {
     // vector buffer to send data to device
     std::vector<std::complex<float> > usrp_buffer(fgbuffer_len);
-
+    uhd::stream_args_t stream_args("fc32"); //complex floats
     unsigned int i;
     // copy symbol and apply gain
     for (i=0; i<fgbuffer_len; i++)
@@ -430,21 +420,15 @@ void ofdmtxrx::end_transmit_frame()
     // send a few extra samples to the device
     // NOTE: this seems necessary to preserve last OFDM symbol in
     //       frame from corruption
-    usrp_tx->get_device()->send(
+    usrp_tx->get_device()->get_tx_stream(stream_args)->send(
         &usrp_buffer.front(), usrp_buffer.size(),
-        metadata_tx,
-        uhd::io_type_t::COMPLEX_FLOAT32,
-        uhd::device::SEND_MODE_FULL_BUFF
-    );
+        metadata_tx);
     
     // send a mini EOB packet
     metadata_tx.start_of_burst = false;
     metadata_tx.end_of_burst   = true;
 
-    usrp_tx->get_device()->send("", 0, metadata_tx,
-        uhd::io_type_t::COMPLEX_FLOAT32,
-        uhd::device::SEND_MODE_FULL_BUFF
-    );
+    usrp_tx->get_device()->get_tx_stream(stream_args)->send("", 0, metadata_tx);
 
 }
 
@@ -555,11 +539,11 @@ void * ofdmtxrx_rx_worker(void * _arg)
 {
     // type cast input argument as ofdmtxrx object
     ofdmtxrx * txcvr = (ofdmtxrx*) _arg;
-
+    uhd::stream_args_t stream_args("fc32", "sc16");
     // set up receive buffer
-    const size_t max_samps_per_packet = txcvr->usrp_rx->get_device()->get_max_recv_samps_per_packet();
+    const size_t max_samps_per_packet = txcvr->usrp_rx->get_device()->get_rx_stream(stream_args)->get_max_num_samps();
     std::vector<std::complex<float> > buffer(max_samps_per_packet);
-
+    stream_args.args["spp"] = max_samps_per_packet;
     // receiver metadata object
     uhd::rx_metadata_t md;
 
@@ -590,11 +574,8 @@ void * ofdmtxrx_rx_worker(void * _arg)
 
             // grab data from device
             //dprintf("rx_worker waiting for samples...\n");
-            size_t num_rx_samps = txcvr->usrp_rx->get_device()->recv(
-                &buffer.front(), buffer.size(), md,
-                uhd::io_type_t::COMPLEX_FLOAT32,
-                uhd::device::RECV_MODE_ONE_PACKET
-            );
+            size_t num_rx_samps = txcvr->usrp_rx->get_device()->get_rx_stream(stream_args)->recv(
+                &buffer.front(), buffer.size(), md);
             //dprintf("rx_worker processing samples...\n");
 
             // ignore error codes for now
@@ -643,10 +624,11 @@ void * ofdmtxrx_rx_worker_blocking(void * _arg)
 {
     // type cast input argument as ofdmtxrx object
     ofdmtxrx * txcvr = (ofdmtxrx*) _arg;
-
+    uhd::stream_args_t stream_args("fc32", "sc16");
     // set up receive buffer
-    const size_t max_samps_per_packet = txcvr->usrp_rx->get_device()->get_max_recv_samps_per_packet();
+    const size_t max_samps_per_packet = txcvr->usrp_rx->get_device()->get_rx_stream(stream_args)->get_max_num_samps();
     std::vector<std::complex<float> > _buffer(max_samps_per_packet);
+    stream_args.args["spp"] = max_samps_per_packet;
     //std::vector<std::complex<float> > * rx_buffer = &_buffer;
     txcvr->rx_buffer = &_buffer;
 
@@ -682,11 +664,9 @@ void * ofdmtxrx_rx_worker_blocking(void * _arg)
             //dprintf("rx_worker waiting for samples...\n");
             dprintf("rx_worker locking buffer mutex\n");
             pthread_mutex_lock(&(txcvr->rx_buffer_mutex));
-            size_t num_rx_samps = txcvr->usrp_rx->get_device()->recv(
-                &(txcvr->rx_buffer->front()), txcvr->rx_buffer->size(), md,
+            size_t num_rx_samps = txcvr->usrp_rx->get_device()->get_rx_stream(stream_args)->recv(
+                &(txcvr->rx_buffer->front()), txcvr->rx_buffer->size(), md
                 //&rx_buffer.front(), rx_buffer.size(), md,
-                uhd::io_type_t::COMPLEX_FLOAT32,
-                uhd::device::RECV_MODE_ONE_PACKET
             );
 	    dprintf("rx_worker signalling buffer filled cond");
             pthread_cond_signal(&(txcvr->rx_buffer_filled_cond));

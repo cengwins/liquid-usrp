@@ -181,7 +181,7 @@ void multichanneltx::UpdateData(unsigned int    _channel,
     }
 
     // set frame properties
-    ofdmflexframegenprops_s fgprops = {LIQUID_CRC_32, _fec0, _fec1, _mod};
+    ofdmflexframegenprops_s fgprops = {LIQUID_CRC_32, (unsigned int)_fec0, (unsigned int)_fec1, (unsigned int)_mod};
     ofdmflexframegen_setprops(framegen[_channel], &fgprops);
 
     // assemble frame

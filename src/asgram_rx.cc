@@ -151,13 +151,13 @@ int main (int argc, char **argv)
     footer[nfft + 4] = ']';
     sprintf(&footer[nfft+6], "%8.3f MHz", frequency*1e-6f);
     unsigned int msdelay = 1000 / fft_rate;
-    
+    uhd::stream_args_t stream_args("fc32", "sc16");
     // create/initialize Hamming window
     //allocate recv buffer and metatdata
     uhd::rx_metadata_t md;
-    const size_t max_samps_per_packet = usrp->get_device()->get_max_recv_samps_per_packet();
+    const size_t max_samps_per_packet = usrp->get_device()->get_rx_stream(stream_args)->get_max_num_samps();
     std::vector<std::complex<float> > buff(max_samps_per_packet);
-
+    stream_args.args["spp"] = max_samps_per_packet;
     // create buffer for arbitrary resamper output
     std::complex<float> * buffer_resamp = new std::complex<float>[(int)(2.0f/rx_resamp_rate) + 64];
  
@@ -175,10 +175,10 @@ int main (int argc, char **argv)
 
     while (continue_running) {
         // grab data from device
-        size_t num_rx_samps = usrp->get_device()->recv(
+        size_t num_rx_samps = usrp->get_device()->get_rx_stream(stream_args)->recv(
             &buff.front(), buff.size(), md,
-            uhd::io_type_t::COMPLEX_FLOAT32,
-            uhd::device::RECV_MODE_ONE_PACKET
+            0.1,
+            true
         );
 
         // 'handle' the error codes

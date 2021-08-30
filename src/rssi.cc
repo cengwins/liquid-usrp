@@ -86,7 +86,7 @@ int main (int argc, char **argv)
 
     uhd::device_addr_t dev_addr;
     uhd::usrp::multi_usrp::sptr usrp = uhd::usrp::multi_usrp::make(dev_addr);
-
+    uhd::stream_args_t stream_args("fc32","sc16"); //complex floats
     // try to set hardware rx rate
     usrp->set_rx_rate(2.0f*bandwidth);
 
@@ -120,8 +120,8 @@ int main (int argc, char **argv)
     windowf  rssi_log = windowf_create(log_size);
 
     //
-    const size_t max_samps_per_packet = usrp->get_device()->get_max_recv_samps_per_packet();
-
+    const size_t max_samps_per_packet = usrp->get_device()->get_rx_stream(stream_args)->get_max_num_samps();
+    stream_args.args["spp"] = max_samps_per_packet;
     //allocate recv buffer and metatdata
     uhd::rx_metadata_t md;
     std::vector<std::complex<float> > buff(max_samps_per_packet);
@@ -144,10 +144,8 @@ int main (int argc, char **argv)
 
     while (continue_running) {
         // grab data from port
-        size_t num_rx_samps = usrp->get_device()->recv(
-            &buff.front(), buff.size(), md,
-            uhd::io_type_t::COMPLEX_FLOAT32,
-            uhd::device::RECV_MODE_ONE_PACKET
+        size_t num_rx_samps = usrp->get_device()->get_rx_stream(stream_args)->recv(
+            &buff.front(), buff.size(), md,0.1, true
         );
 
         //handle the error codes

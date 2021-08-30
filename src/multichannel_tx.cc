@@ -102,7 +102,7 @@ int main (int argc, char **argv)
     //dev_addr["addr0"] = "192.168.10.2";
     //dev_addr["addr1"] = "192.168.10.3";
     uhd::usrp::multi_usrp::sptr usrp = uhd::usrp::multi_usrp::make(dev_addr);
-
+    uhd::stream_args_t stream_args("fc32","sc16"); //complex floats
     // set properties
     // TODO: compensate for rate provided by multichanneltx
     double tx_rate = num_channels*bandwidth;
@@ -205,10 +205,8 @@ int main (int argc, char **argv)
                 usrp_sample_counter=0;
 
                 // send the result to the USRP
-                usrp->get_device()->send(
-                    &usrp_buffer.front(), usrp_buffer.size(), md,
-                    uhd::io_type_t::COMPLEX_FLOAT32,
-                    uhd::device::SEND_MODE_FULL_BUFF
+                usrp->get_device()->get_tx_stream(stream_args)->send(
+                    &usrp_buffer.front(), usrp_buffer.size(), md
                 );
             }
         }
@@ -218,9 +216,7 @@ int main (int argc, char **argv)
     // send a mini EOB packet
     md.start_of_burst = false;
     md.end_of_burst   = true;
-    usrp->get_device()->send("", 0, md,
-        uhd::io_type_t::COMPLEX_FLOAT32,
-        uhd::device::SEND_MODE_FULL_BUFF
+    usrp->get_device()->get_tx_stream(stream_args)->send("", 0, md
     );
 
     // sleep for a small amount of time to allow USRP buffers

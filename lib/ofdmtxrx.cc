@@ -306,7 +306,7 @@ void ofdmtxrx::transmit_packet(unsigned char * _header,
     metadata_tx.end_of_burst   = false; // 
     metadata_tx.has_time_spec  = false; // set to false to send immediately
     //TODO: flush buffers
-    uhd::stream_args_t stream_args("fc32"); //complex floats
+    uhd::stream_args_t stream_args("fc32","sc16"); //complex floats
     // vector buffer to send data to device
     std::vector<std::complex<float> > usrp_buffer(fgbuffer_len);
 
@@ -385,7 +385,7 @@ void ofdmtxrx::transmit_symbol()
 {
     // vector buffer to send data to device
     std::vector<std::complex<float> > usrp_buffer(fgbuffer_len);
-    uhd::stream_args_t stream_args("fc32"); //complex floats
+    uhd::stream_args_t stream_args("fc32","sc16"); //complex floats
     // generate a single OFDM frame
     //bool last_symbol=false;
     unsigned int i;
@@ -411,7 +411,7 @@ void ofdmtxrx::end_transmit_frame()
 {
     // vector buffer to send data to device
     std::vector<std::complex<float> > usrp_buffer(fgbuffer_len);
-    uhd::stream_args_t stream_args("fc32"); //complex floats
+    uhd::stream_args_t stream_args("fc32","sc16"); //complex floats
     unsigned int i;
     // copy symbol and apply gain
     for (i=0; i<fgbuffer_len; i++)

@@ -135,7 +135,7 @@ int main (int argc, char **argv)
 
     uhd::device_addr_t dev_addr;
     uhd::usrp::multi_usrp::sptr usrp = uhd::usrp::multi_usrp::make(dev_addr);
-
+    uhd::stream_args_t stream_args("fc32","sc16"); //complex floats
     // set properties
     double rx_rate = 4.0f*bandwidth;
     // NOTE : the sample rate computation MUST be in double precision so
@@ -183,9 +183,9 @@ int main (int argc, char **argv)
 
     //allocate recv buffer and metatdata
     uhd::rx_metadata_t md;
-    const size_t max_samps_per_packet = usrp->get_device()->get_max_recv_samps_per_packet();
+    const size_t max_samps_per_packet = usrp->get_device()->get_rx_stream(stream_args)->get_max_num_samps();
     std::vector<std::complex<float> > buff(max_samps_per_packet);
-
+    stream_args.args["spp"] = max_samps_per_packet;
     // create frame synchronizer
     framesync64 fs = framesync64_create(callback, (void*)&bandwidth);
     framesync64_print(fs);
@@ -210,10 +210,8 @@ int main (int argc, char **argv)
 
     while (continue_running) {
         // grab data from device
-        size_t num_rx_samps = usrp->get_device()->recv(
-            &buff.front(), buff.size(), md,
-            uhd::io_type_t::COMPLEX_FLOAT32,
-            uhd::device::RECV_MODE_ONE_PACKET
+        size_t num_rx_samps = usrp->get_device()->get_rx_stream(stream_args)->recv(
+            &buff.front(), buff.size(), md,  0.1, true
         );
 
         // 'handle' the error codes

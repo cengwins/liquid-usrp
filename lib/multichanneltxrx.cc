@@ -404,7 +404,7 @@ void * multichanneltxrx_tx_worker(void * _arg)
 {
     // type cast input argument as multichanneltxrx object
     multichanneltxrx * txcvr = (multichanneltxrx*) _arg;
-    uhd::stream_args_t stream_args("fc32"); //complex floats
+    uhd::stream_args_t stream_args("fc32","sc16"); //complex floats
     unsigned int i;
 
     // buffer to hold filterbank channels

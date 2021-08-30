@@ -117,7 +117,7 @@ int main (int argc, char **argv)
     //dev_addr["addr0"] = "192.168.10.2";
     //dev_addr["addr1"] = "192.168.10.3";
     uhd::usrp::multi_usrp::sptr usrp = uhd::usrp::multi_usrp::make(dev_addr);
-
+    uhd::stream_args_t stream_args("fc32","sc16"); //complex floats
     // set properties
     double tx_rate = 4.0*bandwidth;
 #if 0
@@ -246,11 +246,8 @@ int main (int argc, char **argv)
                     tx_buffer_samples=0;
 
                     //send the entire contents of the buffer
-                    usrp->get_device()->send(
-                        &buff.front(), buff.size(), md,
-                        uhd::io_type_t::COMPLEX_FLOAT32,
-                        uhd::device::SEND_MODE_FULL_BUFF
-                    );
+                    usrp->get_device()->get_tx_stream(stream_args)->send(
+                        &buff.front(), buff.size(), md);
                 }
             }
         }
@@ -263,10 +260,7 @@ int main (int argc, char **argv)
     // send a mini EOB packet
     md.start_of_burst = false;
     md.end_of_burst   = true;
-    usrp->get_device()->send("", 0, md,
-        uhd::io_type_t::COMPLEX_FLOAT32,
-        uhd::device::SEND_MODE_FULL_BUFF
-    );
+    usrp->get_device()->get_tx_stream(stream_args)->send("", 0, md);
 
     //finished
     printf("usrp data transfer complete\n");

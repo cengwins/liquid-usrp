@@ -22,3 +22,4 @@ aclocal
 autoconf
 autoheader
 #automake --foreign --add-missing
+autoupdate

@@ -29,7 +29,7 @@ AC_INIT([liquid-usrp],[0.1.0],[liquid@vt.edu])
 AC_CONFIG_AUX_DIR(scripts/)
 
 # Autoheader
-AC_CONFIG_HEADER(config.h)
+AC_CONFIG_HEADERS([config.h])
 AH_TOP([
 #ifndef __LIQUID_CONFIG_H__
 #define __LIQUID_CONFIG_H__
@@ -45,6 +45,9 @@ AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_INSTALL
 AC_PROG_RANLIB
+
+
+AX_CXX_COMPILE_STDCXX_11(, mandatory)
 
 # Check for necessary libraries, library functions
 AC_FUNC_ERROR_AT_LINE

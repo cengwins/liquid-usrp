@@ -62,8 +62,8 @@ help:
 
 
 # flags
-INCLUDE_CFLAGS	= -I./ -I./include/
-CFLAGS		+= $(INCLUDE_CFLAGS) -g -O2 -Wall -fPIC
+INCLUDE_CFLAGS	= -I./ -I./include/ -I/usr/local/include
+CFLAGS		+= $(INCLUDE_CFLAGS) -g -O2 -Wall -fPIC 
 CPPFLAGS	+= $(INCLUDE_CFLAGS) -g -O2 -Wall -fPIC
 LDFLAGS		+= @LIBS@
 ARFLAGS		= r

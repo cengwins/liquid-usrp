@@ -42,11 +42,98 @@
 #   define dprintf(s) /* s */
 #endif
 
+
+int defaultcallback(unsigned char *  _header,
+             int              _header_valid,
+             unsigned char *  _payload,
+             unsigned int     _payload_len,
+             int              _payload_valid,
+             framesyncstats_s _stats,
+             void *           _userdata)
+{
+    return 0;
+}
 ofdmtxrx::ofdmtxrx(void )
 {
     fprintf(stderr,"constructed ofdmtxrx\n");
+    debug_enabled=true;
 };
 
+ofdmtxrx::ofdmtxrx(unsigned int       _M,
+                   unsigned int       _cp_len,
+                   unsigned int       _taper_len)
+{
+
+    // validate input
+    if (_M < 8) {
+        fprintf(stderr,"error: ofdmtxrx::ofdmtxrx(), number of subcarriers must be at least 8\n");
+        throw 0;
+    } else if (_cp_len < 1) {
+        fprintf(stderr,"error: ofdmtxrx::ofdmtxrx(), cyclic prefix length must be at least 1\n");
+        throw 0;
+    } else if (_taper_len > _cp_len) {
+        fprintf(stderr,"error: ofdmtxrx::ofdmtxrx(), taper length cannot exceed cyclic prefix length\n");
+        throw 0;
+    }
+
+    // set internal properties
+    M            = _M;
+    cp_len       = _cp_len;
+    taper_len    = _taper_len;
+    debug_enabled= true;
+    fprintf(stderr,"error1\n");
+    // create frame generator
+    unsigned char * p = NULL;   // subcarrier allocation (default)
+    ofdmflexframegenprops_init_default(&fgprops);
+    fgprops.check           = LIQUID_CRC_32;
+    fgprops.fec0            = LIQUID_FEC_NONE;
+    fgprops.fec1            = LIQUID_FEC_HAMMING128;
+    fgprops.mod_scheme      = LIQUID_MODEM_QPSK;
+    fg = ofdmflexframegen_create(M, cp_len, taper_len, p, &fgprops);
+
+    // allocate memory for frame generator output (single OFDM symbol)
+    fgbuffer_len = M + cp_len;
+    fgbuffer = (std::complex<float>*) malloc(fgbuffer_len * sizeof(std::complex<float>));
+    fprintf(stderr,"error2\n");
+
+    // create frame synchronizer
+    fs = ofdmflexframesync_create(M, cp_len, taper_len, NULL, defaultcallback, NULL);
+    // TODO: create buffer
+    fprintf(stderr,"error3\n");
+    // create usrp objects
+    uhd::device_addr_t dev_addr;
+    try{
+        usrp_tx = uhd::usrp::multi_usrp::make(dev_addr);
+        usrp_rx = uhd::usrp::multi_usrp::make(dev_addr);
+    }
+    catch (...) {
+        // Block of code to handle errors
+    }
+    fprintf(stderr,"error4\n");
+    // initialize default tx values
+    set_tx_freq(462.0e6f);
+    set_tx_rate(500e3);
+    set_tx_gain_soft(-12.0f);
+    set_tx_gain_uhd(40.0f);
+
+    // initialize default rx values
+    set_rx_freq(462.0e6f);
+    set_rx_rate(500e3);
+    set_rx_gain_uhd(20.0f);
+    fprintf(stderr,"error5\n");
+    // reset transceiver
+    reset_tx();
+    reset_rx();
+    fprintf(stderr,"error6\n");
+    // create and start rx thread
+    rx_running = false;                     // receiver is not running initially
+    rx_thread_running = true;               // receiver thread IS running initially
+    pthread_mutex_init(&rx_mutex, NULL);    // receiver mutex
+    pthread_mutex_init(&rx_buffer_mutex, NULL);    // receiver buffer mutex
+    pthread_cond_init(&rx_cond,   NULL);    // receiver condition
+    pthread_create(&rx_process,   NULL, ofdmtxrx_rx_worker, (void*)this);
+    fprintf(stderr,"error7\n");
+}
 // default constructor
 //  _M              :   OFDM: number of subcarriers
 //  _cp_len         :   OFDM: cyclic prefix length
@@ -77,7 +164,7 @@ ofdmtxrx::ofdmtxrx(unsigned int       _M,
     M            = _M;
     cp_len       = _cp_len;
     taper_len    = _taper_len;
-    debug_enabled= false;
+    debug_enabled= true;
 
     // create frame generator
     unsigned char * p = NULL;   // subcarrier allocation (default)
@@ -153,7 +240,7 @@ ofdmtxrx::ofdmtxrx(unsigned int       _M,
     M            = _M;
     cp_len       = _cp_len;
     taper_len    = _taper_len;
-    debug_enabled= false;
+    debug_enabled= true;
 
     // create frame generator
     unsigned char * p = NULL;   // subcarrier allocation (default)
@@ -265,32 +352,64 @@ ofdmtxrx::~ofdmtxrx()
 // set transmitter frequency
 void ofdmtxrx::set_tx_freq(float _tx_freq)
 {
-    usrp_tx->set_tx_freq(_tx_freq);
-    fprintf(stderr,"ofdmtxrx:set_tx_freq%f\n", _tx_freq);
+    if (usrp_tx != NULL)
+    {
+        usrp_tx->set_tx_freq(_tx_freq);
+        fprintf(stderr,"tx_freq=&f\n",_tx_freq);
+    }
+    else
+    {
+       fprintf(stderr,"USRP_RX is NULL  tx_freq=%f\n",_tx_freq);
+    }
 }
 
 // set transmitter sample rate
 void ofdmtxrx::set_tx_rate(float _tx_rate)
 {
-    usrp_tx->set_tx_rate(_tx_rate);
+    if (usrp_tx != NULL)
+    {
+        usrp_tx->set_tx_rate(_tx_rate);
+        fprintf(stderr,"tx_rate=%f\n", _tx_rate);
+    }
+    else
+    {
+       fprintf(stderr,"USRP_RX is NULL  tx_rate=%f\n", _tx_rate);
+    }
+
 }
 
 // set transmitter software gain
 void ofdmtxrx::set_tx_gain_soft(float _tx_gain_soft)
 {
     tx_gain = powf(10.0f, _tx_gain_soft/20.0f);
+    fprintf(stderr,"_tx_gain_soft=%f\n",_tx_gain_soft);
+
 }
 
 // set transmitter hardware (UHD) gain
 void ofdmtxrx::set_tx_gain_uhd(float _tx_gain_uhd)
 {
-    usrp_tx->set_tx_gain(_tx_gain_uhd);
+    if (usrp_tx != NULL)
+    {
+        usrp_tx->set_tx_gain(_tx_gain_uhd);
+    }
+    else
+    {
+       fprintf(stderr,"USRP_RX is NULL _tx_gain_uhd=%f\n", _tx_gain_uhd);
+    }
 }
 
 // set transmitter antenna
 void ofdmtxrx::set_tx_antenna(char * _tx_antenna)
 {
-    usrp_rx->set_tx_antenna(_tx_antenna);
+    if (usrp_rx != NULL)
+    {
+        usrp_rx->set_tx_antenna(_tx_antenna);
+    }
+    else
+    {
+       dprintf("USRP_RX is NULL...\n");
+    }
 }
 
 // reset transmitter objects and buffers
@@ -445,25 +564,53 @@ void ofdmtxrx::end_transmit_frame()
 // set receiver frequency
 void ofdmtxrx::set_rx_freq(float _rx_freq)
 {
-    usrp_rx->set_rx_freq(_rx_freq);
+    if (usrp_rx != NULL)
+    {
+        usrp_rx->set_rx_freq(_rx_freq);
+    }
+    else
+    {
+       dprintf("USRP_RX is NULL...\n");
+    }
 }
 
 // set receiver sample rate
 void ofdmtxrx::set_rx_rate(float _rx_rate)
 {
-    usrp_rx->set_rx_rate(_rx_rate);
+    if (usrp_rx != NULL)
+    {
+        usrp_rx->set_rx_rate(_rx_rate);
+    }
+    else
+    {
+       dprintf("USRP_RX is NULL...\n");
+    }
 }
 
 // set receiver hardware (UHD) gain
 void ofdmtxrx::set_rx_gain_uhd(float _rx_gain_uhd)
 {
-    usrp_rx->set_rx_gain(_rx_gain_uhd);
+    if (usrp_rx != NULL)
+    {
+        usrp_rx->set_rx_gain(_rx_gain_uhd);
+    }
+    else
+    {
+       dprintf("USRP_RX is NULL...\n");
+    }
 }
 
 // set receiver antenna
 void ofdmtxrx::set_rx_antenna(char * _rx_antenna)
 {
-    usrp_rx->set_rx_antenna(_rx_antenna);
+    if (usrp_rx != NULL)
+    {
+        usrp_rx->set_rx_antenna(_rx_antenna);
+    }
+    else
+    {
+       dprintf("USRP_RX is NULL...\n");
+    }
 }
 
 // reset receiver objects and buffers
@@ -480,8 +627,14 @@ void ofdmtxrx::start_rx()
     rx_running = true;
 
     // tell device to start
-    usrp_rx->issue_stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
-
+    if (usrp_rx != NULL)
+    {
+        usrp_rx->issue_stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
+    }
+    else
+    {
+       dprintf("USRP_RX is NULL...\n");
+    }
     // signal condition (tell rx worker to start)
     pthread_cond_signal(&rx_cond);
 }
@@ -494,7 +647,14 @@ void ofdmtxrx::stop_rx()
     rx_running = false;
 
     // tell device to stop
-    usrp_rx->issue_stream_cmd(uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS);
+    if (usrp_rx != NULL)
+    {
+        usrp_rx->issue_stream_cmd(uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS);
+    }
+    else
+    {
+       dprintf("USRP_RX is NULL...\n");
+    }
 }
 
 //
@@ -505,7 +665,7 @@ void ofdmtxrx::stop_rx()
 void ofdmtxrx::debug_enable()
 {
     debug_enabled = true;
-    ofdmflexframesync_debug_enable(fs);
+    //ofdmflexframesync_debug_enable(fs);
 }
 
 // disable debugging

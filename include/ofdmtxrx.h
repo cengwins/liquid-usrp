@@ -59,6 +59,10 @@ public:
              framesync_callback _callback,
              void *             _userdata);
 
+    ofdmtxrx(unsigned int       _M,
+             unsigned int       _cp_len,
+             unsigned int       _taper_len);
+
     // custom constructor that allows selection between 
     // original ofdmtxrx_rx_worker() and ofdmtxrx_rx_worker_blocking()
     ofdmtxrx(unsigned int       _M,

@@ -4,6 +4,7 @@
 #include "ofdmtxrx.h"
 #include<string>
 #include <pybind11/stl.h>
+#include <pybind11/functional.h>
 
 namespace py = pybind11;
 using namespace pybind11::literals;
@@ -24,8 +25,7 @@ PYBIND11_PLUGIN(pybind11_wrapper) {
         .def("set_tx_rate", &eonofdmtxrx::set_tx_rate);
 
     py::class_<ofdmtxrx>(m, "ofdmtxrx")
-        .def(py::init<>())
-        .def(py::init<uint,uint,uint>())
+        .def(py::init<uint,uint,uint,python_callback_t>())
         .def("set_tx_freq", &ofdmtxrx::set_tx_freq)
         .def("set_tx_rate", &ofdmtxrx::set_tx_rate)
         .def("set_tx_gain_soft", &ofdmtxrx::set_tx_gain_soft)

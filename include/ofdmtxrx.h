@@ -30,7 +30,7 @@
 #include <pthread.h>
 #include <liquid/liquid.h>
 #include <uhd/usrp/multi_usrp.hpp>
-
+#include <functional>
 // receiver worker thread
 void * ofdmtxrx_rx_worker(void * _arg);
 
@@ -41,9 +41,21 @@ void * ofdmtxrx_rx_worker(void * _arg);
 // sent to the synchronizer.    
 void * ofdmtxrx_rx_worker_blocking(void * _arg);
 
+typedef std::function<int(unsigned char *, int, unsigned char *, unsigned int, int)> python_callback_t;
+
+
+static int defaultpythoncallback(unsigned char *  _header,
+             int              _header_valid,
+             unsigned char *  _payload,
+             unsigned int     _payload_len,
+             int              _payload_valid)
+{
+    fprintf(stderr,"Callback:defaultpythoncallback called...");
+    return 0;
+}
+
 class ofdmtxrx {
 public:
-    ofdmtxrx( ); // test constructor for python binding
 
     // default constructor
     //  _M              :   OFDM: number of subcarriers
@@ -58,11 +70,16 @@ public:
              unsigned char *    _p,
              framesync_callback _callback,
              void *             _userdata);
+//
+//    ofdmtxrx(unsigned int       _M,
+//             unsigned int       _cp_len,
+//             unsigned int       _taper_len);
 
-    ofdmtxrx(unsigned int       _M,
-             unsigned int       _cp_len,
-             unsigned int       _taper_len);
 
+ ofdmtxrx(unsigned int       _M,
+                   unsigned int       _cp_len,
+                   unsigned int       _taper_len,
+                   python_callback_t  _callback);
     // custom constructor that allows selection between 
     // original ofdmtxrx_rx_worker() and ofdmtxrx_rx_worker_blocking()
     ofdmtxrx(unsigned int       _M,
@@ -144,6 +161,7 @@ public:
     pthread_cond_t  esbrs_ready;
     //int * esbrs_ready_ptr;
     //pthread_mutex_t * esbrs_ready_mutex_ptr;
+    python_callback_t callback = defaultpythoncallback;
 private:
     // set timespec for timeout
     //  _ts         :   pointer to timespec structure

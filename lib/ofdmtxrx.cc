@@ -51,19 +51,18 @@ int defaultcallback(unsigned char *  _header,
              framesyncstats_s _stats,
              void *           _userdata)
 {
-    return 0;
+    ofdmtxrx* mycls = (ofdmtxrx*)_userdata;
+    mycls->callback(_header, _header_valid, _payload, _payload_len, _payload_valid);
 }
-ofdmtxrx::ofdmtxrx(void )
-{
-    fprintf(stderr,"constructed ofdmtxrx\n");
-    debug_enabled=true;
-};
+
 
 ofdmtxrx::ofdmtxrx(unsigned int       _M,
                    unsigned int       _cp_len,
-                   unsigned int       _taper_len)
+                   unsigned int       _taper_len,
+                   python_callback_t _callback)
 {
 
+    callback = _callback;
     // validate input
     if (_M < 8) {
         fprintf(stderr,"error: ofdmtxrx::ofdmtxrx(), number of subcarriers must be at least 8\n");
@@ -97,7 +96,7 @@ ofdmtxrx::ofdmtxrx(unsigned int       _M,
     fprintf(stderr,"error2\n");
 
     // create frame synchronizer
-    fs = ofdmflexframesync_create(M, cp_len, taper_len, NULL, defaultcallback, NULL);
+    fs = ofdmflexframesync_create(M, cp_len, taper_len, NULL, defaultcallback, this);
     // TODO: create buffer
     fprintf(stderr,"error3\n");
     // create usrp objects

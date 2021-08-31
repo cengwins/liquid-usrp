@@ -43,6 +43,8 @@ void * ofdmtxrx_rx_worker_blocking(void * _arg);
 
 class ofdmtxrx {
 public:
+    ofdmtxrx( ); // test constructor for python binding
+
     // default constructor
     //  _M              :   OFDM: number of subcarriers
     //  _cp_len         :   OFDM: cyclic prefix length

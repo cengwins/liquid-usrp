@@ -2,16 +2,17 @@ import os, sys
 
 from distutils.core import setup, Extension
 from distutils import sysconfig
-
-cpp_args = ['-std=c++11', '-stdlib=libc++', '-mmacosx-version-min=10.7']
-
+# '-lliquidusrp',
+cpp_args = ['-w', '-std=c++11', '-stdlib=libc++', '-mmacosx-version-min=10.7']
+link_args = ['-v', '-L.',  '-lfec', '-lboost_system', '-lpthread', '-luhd', '-lliquid', '-lm', '-lc']
 ext_modules = [
     Extension(
     'pybind11_wrapper',
-        ['lib/funcs.cc', 'lib/pybind11_wrapper.cc'],
+        ['lib/funcs.cc', 'lib/pybind11_wrapper.cc',  'lib/multichannelrx.cc','lib/multichanneltx.cc', 'lib/multichanneltxrx.cc', 'lib/ofdmtxrx.cc', 'lib/timer.cc'],
         include_dirs=['pybind11/include','include'],
     language='c++',
     extra_compile_args = cpp_args,
+    extra_link_args = link_args,
     ),
 ]
 

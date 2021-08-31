@@ -42,6 +42,11 @@
 #   define dprintf(s) /* s */
 #endif
 
+ofdmtxrx::ofdmtxrx(void )
+{
+    fprintf(stderr,"constructed ofdmtxrx\n");
+};
+
 // default constructor
 //  _M              :   OFDM: number of subcarriers
 //  _cp_len         :   OFDM: cyclic prefix length
@@ -261,6 +266,7 @@ ofdmtxrx::~ofdmtxrx()
 void ofdmtxrx::set_tx_freq(float _tx_freq)
 {
     usrp_tx->set_tx_freq(_tx_freq);
+    fprintf(stderr,"ofdmtxrx:set_tx_freq%f\n", _tx_freq);
 }
 
 // set transmitter sample rate

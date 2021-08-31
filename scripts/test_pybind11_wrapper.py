@@ -9,3 +9,12 @@ def test_add():
 
 if __name__ == '__main__':
     test_add()
+    p = pybind11_wrapper.Pet('Molly')
+    print(p)
+    print(p.getName())
+
+    o = pybind11_wrapper.ofdmtxrx()
+    o.set_tx_freq(2000)
+
+    while(True):
+        pass

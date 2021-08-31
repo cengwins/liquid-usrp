@@ -3,6 +3,9 @@ sys.path.append('/Users/eronur/Documents/GitHub/liquid-usrp')
 
 import pybind11_wrapper
 
+def mycallback(header,headervalid,payload,payloadlen,payloadvalid):
+    print("callback", header, header, payload, payloadlen, payloadvalid)
+
 def test_add():
     assert(pybind11_wrapper.add(3, 4) == 7)
     print(pybind11_wrapper.add(3, 4))
@@ -20,7 +23,7 @@ if __name__ == '__main__':
     cp_len = 6
     taper_len = 4
 
-    o = pybind11_wrapper.ofdmtxrx(M,cp_len,taper_len)
+    o = pybind11_wrapper.ofdmtxrx(M,cp_len,taper_len,mycallback)
 
     #o = pybind11_wrapper.ofdmtxrx()
     # o.debug_enable()

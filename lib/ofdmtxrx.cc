@@ -63,6 +63,7 @@ ofdmtxrx::ofdmtxrx(unsigned int       _M,
 {
 
     callback = _callback;
+    callback((unsigned char *)"header", 5, (unsigned char *)"payload", 7, 1);
     // validate input
     if (_M < 8) {
         fprintf(stderr,"error: ofdmtxrx::ofdmtxrx(), number of subcarriers must be at least 8\n");

@@ -62,9 +62,11 @@ help:
 
 
 # flags
+#INCLUDE_CFLAGS	= -I./ -I./include/ -I/usr/local/include  $(shell python3-config --cflags) $(shell python3 -m pybind11 --includes)
 INCLUDE_CFLAGS	= -I./ -I./include/ -I/usr/local/include
 CFLAGS		+= $(INCLUDE_CFLAGS) -g -O2 -Wall -fPIC -w
 CPPFLAGS	+= $(INCLUDE_CFLAGS) -g -O2 -Wall -fPIC -w
+#LDFLAGS		+= @LIBS@ $(shell python3-config --ldflags)
 LDFLAGS		+= @LIBS@
 ARFLAGS		= r
 
@@ -82,7 +84,7 @@ library_src :=				\
 	lib/multichanneltx.cc		\
 	lib/multichanneltxrx.cc		\
 	lib/ofdmtxrx.cc			\
-	lib/timer.cc			\
+	lib/timer.cc
 
 # library header files
 library_headers :=			\
@@ -90,7 +92,7 @@ library_headers :=			\
 	include/multichanneltx.h	\
 	include/multichanneltxrx.h	\
 	include/ofdmtxrx.h		\
-	include/timer.h			\
+	include/timer.h
 
 # example programs
 example_src :=				\
@@ -144,7 +146,12 @@ example_src :=				\
 ## TARGET : all - build shared library and examples (default)
 ##
 
-all : libraries examples
+pybind11setup : lib/funcs.cc include/funcs.h
+	python scripts/setup.py build_ext -i
+	python scripts/test_pybind11_wrapper.py
+
+all : libraries examples pybind11setup
+
 
 library_objs	= $(patsubst %.cc,%.o,$(library_src))
 
@@ -235,6 +242,9 @@ clean: clean-examples
 	$(RM) $(library_objs)
 	$(RM) libliquidusrp.a
 	$(RM) $(SHARED_LIB)
+	$(RM) pybind11_wrapper.so
+	$(RM) configure~
+
 
 
 ##
@@ -246,3 +256,5 @@ distclean: clean
 	$(RM) configure config.h config.h.in config.h.in~ config.log config.status
 	$(RM) -r autom4te.cache
 	$(RM) makefile
+	$(RM) pybind11_wrapper.so
+	$(RM) configure~

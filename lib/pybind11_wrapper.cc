@@ -18,10 +18,10 @@ PYBIND11_PLUGIN(pybind11_wrapper) {
         .def("setName", &Pet::setName)
         .def("getName", &Pet::getName);
 
-    py::class_<ofdmtxrx>(m, "ofdmtxrx")
+    py::class_<eonofdmtxrx>(m, "eonofdmtxrx")
         .def(py::init<>())
-        .def("set_tx_freq", &ofdmtxrx::set_tx_freq)
-        .def("set_tx_rate", &ofdmtxrx::set_tx_rate);
+        .def("set_tx_freq", &eonofdmtxrx::set_tx_freq)
+        .def("set_tx_rate", &eonofdmtxrx::set_tx_rate);
 
 
     return m.ptr();

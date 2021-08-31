@@ -13,7 +13,7 @@ if __name__ == '__main__':
     print(p)
     print(p.getName())
 
-    o = pybind11_wrapper.ofdmtxrx()
+    o = pybind11_wrapper.eonofdmtxrx()
     o.set_tx_freq(2000)
 
     while(True):

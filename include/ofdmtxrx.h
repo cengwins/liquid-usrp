@@ -41,12 +41,12 @@ void * ofdmtxrx_rx_worker(void * _arg);
 // sent to the synchronizer.    
 void * ofdmtxrx_rx_worker_blocking(void * _arg);
 
-typedef std::function<int(unsigned char *, int, unsigned char *, unsigned int, int)> python_callback_t;
+typedef std::function<int( char *, int,  char *, unsigned int, int)> python_callback_t;
 
 
-static int defaultpythoncallback(unsigned char *  _header,
+static int defaultpythoncallback( char *  _header,
              int              _header_valid,
-             unsigned char *  _payload,
+              char *  _payload,
              unsigned int     _payload_len,
              int              _payload_valid)
 {
@@ -68,7 +68,7 @@ public:
              unsigned int       _cp_len,
              unsigned int       _taper_len,
              unsigned char *    _p,
-             framesync_callback _callback,
+             const framesync_callback _callback,
              void *             _userdata);
 //
 //    ofdmtxrx(unsigned int       _M,
@@ -76,10 +76,9 @@ public:
 //             unsigned int       _taper_len);
 
 
- ofdmtxrx(unsigned int       _M,
+    ofdmtxrx(unsigned int       _M,
                    unsigned int       _cp_len,
-                   unsigned int       _taper_len,
-                   python_callback_t  _callback);
+                   unsigned int       _taper_len);
     // custom constructor that allows selection between 
     // original ofdmtxrx_rx_worker() and ofdmtxrx_rx_worker_blocking()
     ofdmtxrx(unsigned int       _M,
@@ -96,6 +95,8 @@ public:
     // 
     // transmitter methods
     //
+    void set_callback(python_callback_t  _callback);
+
     void set_tx_freq(float _tx_freq);
     void set_tx_rate(float _tx_rate);
     void set_tx_gain_soft(float _tx_gain_soft);

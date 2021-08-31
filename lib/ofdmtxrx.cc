@@ -52,18 +52,16 @@ int defaultcallback(unsigned char *  _header,
              void *           _userdata)
 {
     ofdmtxrx* mycls = (ofdmtxrx*)_userdata;
-    mycls->callback(_header, _header_valid, _payload, _payload_len, _payload_valid);
+    mycls->callback((char *)_header, _header_valid, (char *)_payload, _payload_len, _payload_valid);
 }
 
 
 ofdmtxrx::ofdmtxrx(unsigned int       _M,
                    unsigned int       _cp_len,
-                   unsigned int       _taper_len,
-                   python_callback_t _callback)
+                   unsigned int       _taper_len)
 {
 
-    callback = _callback;
-    callback((unsigned char *)"header", 5, (unsigned char *)"payload", 7, 1);
+
     // validate input
     if (_M < 8) {
         fprintf(stderr,"error: ofdmtxrx::ofdmtxrx(), number of subcarriers must be at least 8\n");
@@ -349,6 +347,14 @@ ofdmtxrx::~ofdmtxrx()
 // transmitter methods
 //
 
+
+void ofdmtxrx::set_callback(python_callback_t  _callback)
+{
+    callback = _callback;
+     char header [7]="eonder";
+     char payload [8] = "payload";
+    callback( header, 6, payload, 7, 1);
+}
 // set transmitter frequency
 void ofdmtxrx::set_tx_freq(float _tx_freq)
 {
@@ -665,7 +671,7 @@ void ofdmtxrx::stop_rx()
 void ofdmtxrx::debug_enable()
 {
     debug_enabled = true;
-    //ofdmflexframesync_debug_enable(fs);
+    ofdmflexframesync_debug_enable(fs);
 }
 
 // disable debugging
@@ -703,6 +709,7 @@ void ofdmtxrx::set_timespec(struct timespec * _ts,
 // receiver worker thread
 void * ofdmtxrx_rx_worker(void * _arg)
 {
+    return NULL;
     // type cast input argument as ofdmtxrx object
     ofdmtxrx * txcvr = (ofdmtxrx*) _arg;
     uhd::stream_args_t stream_args("fc32", "sc16");

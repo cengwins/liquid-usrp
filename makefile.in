@@ -147,8 +147,8 @@ example_src :=				\
 ##
 
 pybind11setup : lib/funcs.cc include/funcs.h
-	python scripts/setup.py build_ext -i
-	python scripts/test_pybind11_wrapper.py
+	python3 scripts/setup.py build_ext -i
+	python3 scripts/test_pybind11_wrapper.py
 
 all : libraries examples pybind11setup
 

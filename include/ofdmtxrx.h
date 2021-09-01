@@ -41,14 +41,15 @@ void * ofdmtxrx_rx_worker(void * _arg);
 // sent to the synchronizer.    
 void * ofdmtxrx_rx_worker_blocking(void * _arg);
 
-typedef std::function<int( char *, int,  char *, unsigned int, int)> python_callback_t;
+typedef std::function<int( std::string, int32_t,  std::string, int32_t, int32_t)> python_callback_t;
 
 
-static int defaultpythoncallback( char *  _header,
-             int              _header_valid,
-              char *  _payload,
-             unsigned int     _payload_len,
-             int              _payload_valid)
+static int defaultpythoncallback(
+             std::string  _header,
+             int32_t      _header_valid,
+             std::string  _payload,
+             int32_t     _payload_len,
+             int32_t     _payload_valid)
 {
     fprintf(stderr,"Callback:defaultpythoncallback called...");
     return 0;
@@ -96,6 +97,7 @@ public:
     // transmitter methods
     //
     void set_callback(python_callback_t  _callback);
+    void try_callback(int i);
 
     void set_tx_freq(float _tx_freq);
     void set_tx_rate(float _tx_rate);

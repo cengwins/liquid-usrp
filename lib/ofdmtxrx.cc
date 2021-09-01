@@ -351,9 +351,15 @@ ofdmtxrx::~ofdmtxrx()
 void ofdmtxrx::set_callback(python_callback_t  _callback)
 {
     callback = _callback;
-     char header [7]="eonder";
-     char payload [8] = "payload";
-    callback( header, 6, payload, 7, 1);
+}
+
+void ofdmtxrx::try_callback(int i)
+{
+    std::string header;
+    header ="eonder";
+    std::string payload;
+    payload = "payload";
+    callback( header, 6, payload, 7, i);
 }
 // set transmitter frequency
 void ofdmtxrx::set_tx_freq(float _tx_freq)
@@ -709,8 +715,9 @@ void ofdmtxrx::set_timespec(struct timespec * _ts,
 // receiver worker thread
 void * ofdmtxrx_rx_worker(void * _arg)
 {
-    return NULL;
+    //return NULL;
     // type cast input argument as ofdmtxrx object
+    fprintf(stderr,"ofdmtxrx_rx_worker error1\n");
     ofdmtxrx * txcvr = (ofdmtxrx*) _arg;
     uhd::stream_args_t stream_args("fc32", "sc16");
     // set up receive buffer
@@ -719,7 +726,7 @@ void * ofdmtxrx_rx_worker(void * _arg)
     stream_args.args["spp"] = max_samps_per_packet;
     // receiver metadata object
     uhd::rx_metadata_t md;
-
+    fprintf(stderr,"ofdmtxrx_rx_worker error2\n");
     while (txcvr->rx_thread_running) {
         // wait for signal to start; lock mutex
         pthread_mutex_lock(&(txcvr->rx_mutex));

@@ -21,15 +21,37 @@ if __name__ == '__main__':
 
 
 
+    frequency = 462.0e6         # carrier frequency
+    bandwidth = 1000e3         # bandwidth
+    num_frames = 2000          # number of frames to transmit
+    txgain_dB = -12.0          # software tx gain [dB]
+    uhd_txgain = 40.0           # uhd (hardware) tx gain
+
+    # ofdm properties
     M = 48
     cp_len = 6
     taper_len = 4
 
-    o = pybind11_wrapper.ofdmtxrx(M,cp_len,taper_len)
-    o.debug_enable()
-    o.set_callback(mycallback)
-    o.try_callback(1)
-    o.try_callback(2)
+    txcvr = pybind11_wrapper.ofdmtxrx(M,cp_len,taper_len)
+    txcvr.debug_enable()
+    txcvr.set_callback(mycallback)
+    txcvr.try_callback(1)
+    txcvr.try_callback(2)
+
+    txcvr.set_tx_freq(frequency);
+    txcvr.set_tx_rate(bandwidth);
+    txcvr.set_tx_gain_soft(txgain_dB);
+    txcvr.set_tx_gain_uhd(uhd_txgain);
+
+    header = "myheader"
+    payload = "mypayload"
+    payload_len = 9
+    ms = pybind11_wrapper.LIQUID_MODEM_QPSK
+    fec0 = pybind11_wrapper.LIQUID_FEC_NONE; # fec(inner)
+    fec1 = pybind11_wrapper.LIQUID_FEC_GOLAY2412; # fec(outer)
+
+    for x in range(6):
+        txcvr.transmit_packet(header, payload, payload_len, ms, fec0, fec1);
 
     #o = pybind11_wrapper.ofdmtxrx()
 

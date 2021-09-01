@@ -5,6 +5,7 @@
 #include<string>
 #include <pybind11/stl.h>
 #include <pybind11/functional.h>
+#include <liquid/liquid.h>
 
 namespace py = pybind11;
 using namespace pybind11::literals;
@@ -49,7 +50,9 @@ PYBIND11_PLUGIN(pybind11_wrapper) {
         .def("debug_enable", &ofdmtxrx::debug_enable)
         .def("debug_disable", &ofdmtxrx::debug_disable)
         ;
-
+    m.attr("LIQUID_MODEM_QPSK") = py::int_((int)LIQUID_MODEM_QPSK);
+    m.attr("LIQUID_FEC_NONE") = py::int_((int)LIQUID_FEC_NONE);
+    m.attr("LIQUID_FEC_GOLAY2412") = py::int_((int)LIQUID_FEC_GOLAY2412);
 
     return m.ptr();
 }

@@ -720,10 +720,14 @@ void * ofdmtxrx_rx_worker(void * _arg)
     fprintf(stderr,"ofdmtxrx_rx_worker error1\n");
     ofdmtxrx * txcvr = (ofdmtxrx*) _arg;
     uhd::stream_args_t stream_args("fc32", "sc16");
+    size_t max_samps_per_packet;
     // set up receive buffer
-    const size_t max_samps_per_packet = txcvr->usrp_rx->get_device()->get_rx_stream(stream_args)->get_max_num_samps();
+    if (txcvr->usrp_rx != NULL)
+    {
+        max_samps_per_packet = txcvr->usrp_rx->get_device()->get_rx_stream(stream_args)->get_max_num_samps();
+    }
     std::vector<std::complex<float> > buffer(max_samps_per_packet);
-    stream_args.args["spp"] = max_samps_per_packet;
+        stream_args.args["spp"] = max_samps_per_packet;
     // receiver metadata object
     uhd::rx_metadata_t md;
     fprintf(stderr,"ofdmtxrx_rx_worker error2\n");
@@ -754,10 +758,13 @@ void * ofdmtxrx_rx_worker(void * _arg)
 
             // grab data from device
             //dprintf("rx_worker waiting for samples...\n");
-            size_t num_rx_samps = txcvr->usrp_rx->get_device()->get_rx_stream(stream_args)->recv(
+            size_t num_rx_samps;
+            if (txcvr->usrp_rx != NULL )
+            {
+                num_rx_samps = txcvr->usrp_rx->get_device()->get_rx_stream(stream_args)->recv(
                 &buffer.front(), buffer.size(), md);
             //dprintf("rx_worker processing samples...\n");
-
+            }
             // ignore error codes for now
 #if 0
 // 'handle' the error codes

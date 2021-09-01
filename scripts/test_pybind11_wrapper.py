@@ -52,6 +52,7 @@ if __name__ == '__main__':
     fec1 = pybind11_wrapper.LIQUID_FEC_GOLAY2412 # fec(outer)
 
     for x in range(6):
+        header = "myheader" + str(x)
         txcvr.transmit_packet_python(header, payload, payload_len, ms, fec0, fec1);
 
     #o = pybind11_wrapper.ofdmtxrx()

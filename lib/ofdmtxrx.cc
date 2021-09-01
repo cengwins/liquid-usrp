@@ -444,7 +444,7 @@ void ofdmtxrx::transmit_packet_python(std::string _headerstr,
     const unsigned char * _header =  reinterpret_cast<const unsigned char *> (_headerstr.c_str());
     const unsigned char * _payload =  reinterpret_cast<const unsigned char *> (_payloadstr.c_str());
     this->transmit_packet((unsigned char *)_header, (unsigned char *)_payload, _payload_len, _mod, _fec0, _fec1);
-    fprintf(stderr,"transmit_packet_python2\n");
+    fprintf(stderr,"transmit_packet_python %s\n", _header);
  }
 
 // update payload data on a particular channel

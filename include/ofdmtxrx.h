@@ -107,6 +107,14 @@ public:
     void reset_tx();
 
     // update payload data on a particular channel
+    void transmit_packet_python(std::string _header,
+                         std::string _payload,
+                         unsigned int    _payload_len,
+                         int             _mod,
+                         int             _fec0,
+                         int             _fec1);
+                         // frame generator properties...
+   // update payload data on a particular channel
     void transmit_packet(unsigned char * _header,
                          unsigned char * _payload,
                          unsigned int    _payload_len,

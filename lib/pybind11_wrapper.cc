@@ -35,7 +35,7 @@ PYBIND11_PLUGIN(pybind11_wrapper) {
         .def("set_tx_gain_uhd", &ofdmtxrx::set_tx_gain_uhd)
         .def("set_tx_antenna", &ofdmtxrx::set_tx_antenna)
         .def("reset_tx", &ofdmtxrx::reset_tx)
-        .def("transmit_packet", &ofdmtxrx::transmit_packet)
+        .def("transmit_packet_python", &ofdmtxrx::transmit_packet_python)
         .def("transmit_symbol", &ofdmtxrx::transmit_symbol)
         .def("assemble_frame", &ofdmtxrx::assemble_frame)
         .def("write_symbol", &ofdmtxrx::write_symbol)

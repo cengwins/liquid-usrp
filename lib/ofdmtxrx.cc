@@ -430,31 +430,52 @@ void ofdmtxrx::reset_tx()
     ofdmflexframegen_reset(fg);
 }
 
+
 // update payload data on a particular channel
-void ofdmtxrx::transmit_packet(unsigned char * _header,
-                               unsigned char * _payload,
+void ofdmtxrx::transmit_packet_python(std::string _headerstr,
+                               std::string _payloadstr,
                                unsigned int    _payload_len,
                                int             _mod,
                                int             _fec0,
                                int             _fec1)
 {
     // set up the metadata flags
+    fprintf(stderr,"transmit_packet_python1\n");
+    const unsigned char * _header =  reinterpret_cast<const unsigned char *> (_headerstr.c_str());
+    const unsigned char * _payload =  reinterpret_cast<const unsigned char *> (_payloadstr.c_str());
+    this->transmit_packet((unsigned char *)_header, (unsigned char *)_payload, _payload_len, _mod, _fec0, _fec1);
+    fprintf(stderr,"transmit_packet_python2\n");
+ }
+
+// update payload data on a particular channel
+void ofdmtxrx::transmit_packet(unsigned char* _header,
+                               unsigned char * _payload,
+                               unsigned int    _payload_len,
+                               int             _mod,
+                               int             _fec0,
+                               int             _fec1)
+{
+    fprintf(stderr,"transmit_packet1\n");
     metadata_tx.start_of_burst = false; // never SOB when continuous
     metadata_tx.end_of_burst   = false; // 
     metadata_tx.has_time_spec  = false; // set to false to send immediately
     //TODO: flush buffers
+    fprintf(stderr,"transmit_packet2\n");
     uhd::stream_args_t stream_args("fc32","sc16"); //complex floats
     // vector buffer to send data to device
     std::vector<std::complex<float> > usrp_buffer(fgbuffer_len);
+    fprintf(stderr,"transmit_packet3\n");
 
     // set properties
     fgprops.mod_scheme  = _mod;
     fgprops.fec0        = _fec0;
     fgprops.fec1        = _fec1;
     ofdmflexframegen_setprops(fg, &fgprops);
+    fprintf(stderr,"transmit_packet4\n");
 
     // assemble frame
     ofdmflexframegen_assemble(fg, _header, _payload, _payload_len);
+    fprintf(stderr,"transmit_packet5\n");
 
     // generate a single OFDM frame
     bool last_symbol=false;
@@ -469,25 +490,28 @@ void ofdmtxrx::transmit_packet(unsigned char * _header,
             usrp_buffer[i] = fgbuffer[i] * tx_gain;
 
         // send samples to the device
+        if (usrp_tx != NULL) {
         usrp_tx->get_device()->get_tx_stream(stream_args)->send(
             &usrp_buffer.front(), usrp_buffer.size(),
             metadata_tx);
-
+        }
     } // while loop
-
+    fprintf(stderr,"transmit_packet6\n");
     // send a few extra samples to the device
     // NOTE: this seems necessary to preserve last OFDM symbol in
     //       frame from corruption
-    usrp_tx->get_device()->get_tx_stream(stream_args)->send(
+    if (usrp_tx != NULL) {
+        usrp_tx->get_device()->get_tx_stream(stream_args)->send(
         &usrp_buffer.front(), usrp_buffer.size(),
         metadata_tx);
-    
+    }
     // send a mini EOB packet
     metadata_tx.start_of_burst = false;
     metadata_tx.end_of_burst   = true;
 
-    usrp_tx->get_device()->get_tx_stream(stream_args)->send("", 0, metadata_tx);
-
+     if (usrp_tx != NULL) {
+        usrp_tx->get_device()->get_tx_stream(stream_args)->send("", 0, metadata_tx);
+       }
 }
 
 // Assemble the frame so it is ready to be written as samples

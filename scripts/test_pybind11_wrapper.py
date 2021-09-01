@@ -45,13 +45,14 @@ if __name__ == '__main__':
 
     header = "myheader"
     payload = "mypayload"
+    #byte_payload = bytes(payload, 'utf-8')
     payload_len = 9
     ms = pybind11_wrapper.LIQUID_MODEM_QPSK
-    fec0 = pybind11_wrapper.LIQUID_FEC_NONE; # fec(inner)
-    fec1 = pybind11_wrapper.LIQUID_FEC_GOLAY2412; # fec(outer)
+    fec0 = pybind11_wrapper.LIQUID_FEC_NONE # fec(inner)
+    fec1 = pybind11_wrapper.LIQUID_FEC_GOLAY2412 # fec(outer)
 
     for x in range(6):
-        txcvr.transmit_packet(header, payload, payload_len, ms, fec0, fec1);
+        txcvr.transmit_packet_python(header, payload, payload_len, ms, fec0, fec1);
 
     #o = pybind11_wrapper.ofdmtxrx()
 

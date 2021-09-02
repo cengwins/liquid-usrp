@@ -67,8 +67,17 @@ int defaultcallback(unsigned char *  _header,
     {
         fprintf(stderr,"ofdmtxrx class null\n");
     }
-    if (_header == NULL) return 0;
-    if (_payload == NULL) return 0;
+    if (_header == NULL) {
+        fprintf(stderr,"defaultcallback _header is null\n");
+        return 0;
+    }
+    {
+        fprintf(stderr,"defaultcallback _header = %s\n", _header);
+    }
+    if (_payload == NULL) {
+        fprintf(stderr,"defaultcallback _payload is null\n");
+        return 0;
+    }
     std::string header( reinterpret_cast< char const* >(_header) ) ;
     std::string payload( reinterpret_cast< char const* >(_payload) ) ;
     int header_valid = _header_valid;
@@ -152,11 +161,12 @@ ofdmtxrx::ofdmtxrx(unsigned int       _M,
         // Block of code to handle errors
     }
 
+/*
     usrp->set_tx_subdev_spec(tx_subdev);
     usrp->set_tx_antenna(tx_ant);
     usrp->set_rx_subdev_spec(rx_subdev);
     usrp->set_rx_antenna(rx_ant);
-
+*/
 
 	uhd::stream_args_t stream_args(cpu_format, otw_format); //EON
 	tx_stream = usrp->get_tx_stream(stream_args);
@@ -525,16 +535,14 @@ void ofdmtxrx::transmit_packet(unsigned char* _header,
                                int             _fec0,
                                int             _fec1)
 {
-    fprintf(stderr,"transmit_packet1 %s\n", _header);
-    //metadata_tx.start_of_burst = false; // never SOB when continuous
-    //metadata_tx.end_of_burst   = false; //
+    fprintf(stderr,"transmit_packet1 %s %s %d %d\n", _header, _payload, _payload_len, _mod );
+    metadata_tx.start_of_burst = false; // never SOB when continuous
+    metadata_tx.end_of_burst   = false; //
     metadata_tx.has_time_spec  = false; // set to false to send immediately
     //TODO: flush buffers
-    fprintf(stderr,"transmit_packet2\n");
     uhd::stream_args_t stream_args(cpu_format,otw_format); //complex floats
     // vector buffer to send data to device
     std::vector<std::complex<float> > usrp_buffer(fgbuffer_len);
-    fprintf(stderr,"transmit_packet3\n");
 
     // set properties
     fgprops.mod_scheme  = _mod;
@@ -577,12 +585,12 @@ void ofdmtxrx::transmit_packet(unsigned char* _header,
         metadata_tx);
 
     // send a mini EOB packet
-    //metadata_tx.start_of_burst = false;
-    //metadata_tx.end_of_burst   = true;
+    metadata_tx.start_of_burst = false;
+    metadata_tx.end_of_burst   = true;
 
 
     tx_stream->send("", 0, metadata_tx);
-    
+
 }
 
 // Assemble the frame so it is ready to be written as samples

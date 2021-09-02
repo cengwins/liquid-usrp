@@ -57,7 +57,7 @@ if __name__ == '__main__':
     fec0 = pybind11_wrapper.LIQUID_FEC_NONE # fec(inner)
     fec1 = pybind11_wrapper.LIQUID_FEC_GOLAY2412 # fec(outer)
 
-    for x in range(10):
+    for x in range(5):
         header = "myheader" + str(x)
         txcvr1.transmit_packet_python(header, payload, payload_len, ms, fec0, fec1);
         time.sleep(0.01)

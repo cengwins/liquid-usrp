@@ -41,15 +41,8 @@ void * ofdmtxrx_rx_worker(void * _arg);
 // sent to the synchronizer.    
 void * ofdmtxrx_rx_worker_blocking(void * _arg);
 
-typedef std::function<int( std::string, int32_t,  std::string, int32_t, int32_t)> python_callback_t;
+typedef std::function<int( std::string, int32_t,  std::string, int32_t, int32_t, float, float)> python_callback_t;
 
-
-int defaultpythoncallback(
-             std::string  _header,
-             int32_t      _header_valid,
-             std::string  _payload,
-             int32_t     _payload_len,
-             int32_t     _payload_valid);
 
 class ofdmtxrx {
 public:
@@ -169,7 +162,7 @@ public:
     pthread_cond_t  esbrs_ready;
     //int * esbrs_ready_ptr;
     //pthread_mutex_t * esbrs_ready_mutex_ptr;
-    python_callback_t callback = defaultpythoncallback;
+    python_callback_t callback ;
 
 
     unsigned long int DAC_RATE = 64e6;
@@ -181,7 +174,7 @@ public:
 	std::string rx_ant = "TX/RX";	// For selecting a specific RX antenna on USRP, check UHD documentation
 	std::string cpu_format = "fc32";	// for I/Q samples: specific cpu format (default "fc32")
 	std::string otw_format = "sc16";	// for I/Q samples: specific "over the wire" format (default "sc16")
-    float frequency = 462.0e6;
+    float frequency = 2462.0e6;
 	float bandwidth = 250e3f;
 	double hw_tx_gain = 70.0; 		// hardware tx antenna gain
 	double sw_tx_gain = -12.0f; // for adapting the transmit power default -12.0f

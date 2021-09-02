@@ -42,17 +42,6 @@
 #   define dprintf(s) /* s */
 #endif
 
-int defaultpythoncallback(
-             std::string  _header,
-             int32_t      _header_valid,
-             std::string  _payload,
-             int32_t     _payload_len,
-             int32_t     _payload_valid)
-{
-    fprintf(stderr,"Callback:defaultpythoncallback called...");
-    return 0;
-}
-
 
 int defaultcallback(unsigned char *  _header,
              int              _header_valid,
@@ -62,6 +51,8 @@ int defaultcallback(unsigned char *  _header,
              framesyncstats_s _stats,
              void *           _userdata)
 {
+    //fprintf(stderr, "***** rssi=%7.2fdB evm=%7.2fdB", _stats.rssi, _stats.evm);
+
     ofdmtxrx* mycls = (ofdmtxrx*)_userdata;
     if (mycls == NULL)
     {
@@ -78,16 +69,35 @@ int defaultcallback(unsigned char *  _header,
         fprintf(stderr,"defaultcallback _payload is null\n");
         return 0;
     }
-    std::string header( reinterpret_cast< char const* >(_header) ) ;
-    std::string payload( reinterpret_cast< char const* >(_payload) ) ;
-    int header_valid = _header_valid;
-    if (_header_valid == NULL ) header_valid=0;
-    int payload_valid = _payload_valid;
-    if (_payload_valid == NULL) payload_valid = 0;
-    int payload_len = _payload_len;
-    if (_payload_len == NULL) payload_len = 0;
-    fprintf(stderr,"defaultcallback %s, %d, %s, %d, %d\n", header.c_str(), header_valid, payload.c_str(), payload_len, payload_valid);
-    mycls->callback( header, header_valid, payload, payload_len, payload_valid);
+    if (_header_valid==1){
+        if (_payload_valid==1)
+        {
+
+                std::string header( reinterpret_cast<char const * >(&_header[0]) ) ;
+                std::string payload( reinterpret_cast<char const * >(&_payload[0]),_payload_len ) ;
+                int header_valid = _header_valid;
+                if (_header_valid == NULL ) header_valid=0;
+                int payload_valid = _payload_valid;
+                if (_payload_valid == NULL) payload_valid = 0;
+                int payload_len = _payload_len;
+                if (_payload_len == NULL) payload_len = 0;
+                try
+                {
+                    mycls->callback( header, header_valid, payload, payload_len, payload_valid, _stats.rssi, _stats.evm);
+                }
+                catch(int e)
+                {
+                    fprintf(stderr,"EXCEPTION defaultcallback\n");
+                }
+        }
+        {
+            fprintf(stderr,"defaultcallback: payload is in error payload\n");
+        }
+    }
+    {
+        fprintf(stderr,"defaultcallback: header is in error\n");
+    }
+
 }
 
 
@@ -115,7 +125,7 @@ ofdmtxrx::ofdmtxrx(unsigned int       _M,
     cp_len       = _cp_len;
     taper_len    = _taper_len;
     debug_enabled= true;
-    fprintf(stderr,"error1\n");
+    //fprintf(stderr,"error1\n");
     // create frame generator
     unsigned char * p = NULL;   // subcarrier allocation (default)
     ofdmflexframegenprops_init_default(&fgprops);
@@ -128,12 +138,12 @@ ofdmtxrx::ofdmtxrx(unsigned int       _M,
     // allocate memory for frame generator output (single OFDM symbol)
     fgbuffer_len = M + cp_len;
     fgbuffer = (std::complex<float>*) malloc(fgbuffer_len * sizeof(std::complex<float>));
-    fprintf(stderr,"error2\n");
+    //fprintf(stderr,"error2\n");
 
     // create frame synchronizer
     fs = ofdmflexframesync_create(M, cp_len, taper_len, NULL, defaultcallback, this);
     // TODO: create buffer
-    fprintf(stderr,"error3 %s\n", _hint.c_str());
+    //fprintf(stderr,"error3 %s\n", _hint.c_str());
     // create usrp objects
     uhd::device_addrs_t dev_addrs;
 
@@ -197,7 +207,7 @@ ofdmtxrx::ofdmtxrx(unsigned int       _M,
     set_rx_gain_uhd(hw_rx_gain);
     usrp->set_rx_bandwidth(bandwidth); // write a local function
 
-    fprintf(stderr,"error5\n");
+    //fprintf(stderr,"error5\n");
     // reset transceiver
     reset_tx();
     reset_rx();
@@ -209,7 +219,7 @@ ofdmtxrx::ofdmtxrx(unsigned int       _M,
     pthread_mutex_init(&rx_buffer_mutex, NULL);    // receiver buffer mutex
     pthread_cond_init(&rx_cond,   NULL);    // receiver condition
     pthread_create(&rx_process,   NULL, ofdmtxrx_rx_worker, (void*)this);
-    fprintf(stderr,"error7\n");
+    //fprintf(stderr,"error7\n");
 
 }
 // default constructor
@@ -435,11 +445,6 @@ void ofdmtxrx::set_callback(python_callback_t  _callback)
 
 void ofdmtxrx::try_callback(int i)
 {
-    std::string header;
-    header ="eonder";
-    std::string payload;
-    payload = "payload";
-    callback( header, 6, payload, 7, i);
 }
 // set transmitter frequency
 void ofdmtxrx::set_tx_freq(float _tx_freq)
@@ -520,11 +525,15 @@ void ofdmtxrx::transmit_packet_python(std::string _headerstr,
                                int             _fec1)
 {
     // set up the metadata flags
-    fprintf(stderr,"transmit_packet_python1\n");
-    const unsigned char * _header =  reinterpret_cast<const unsigned char *> (_headerstr.c_str());
-    const unsigned char * _payload =  reinterpret_cast<const unsigned char *> (_payloadstr.c_str());
+    //fprintf(stderr,"transmit_packet_python1\n");
+    char _header[_headerstr.length()];
+    char _payload[_payloadstr.length()];
+    strcpy(_header, _headerstr.c_str());
+    strcpy(_payload, _payloadstr.c_str());
+//    char * _header =  &_headerstr[0];
+//    char * _payload =  &_payloadstr[0];
     this->transmit_packet((unsigned char *)_header, (unsigned char *)_payload, _payload_len, _mod, _fec0, _fec1);
-    fprintf(stderr,"transmit_packet_python %s\n", _header);
+    //fprintf(stderr,"transmit_packet_python %s\n", _header);
  }
 
 // update payload data on a particular channel
@@ -535,6 +544,7 @@ void ofdmtxrx::transmit_packet(unsigned char* _header,
                                int             _fec0,
                                int             _fec1)
 {
+
     fprintf(stderr,"transmit_packet1 %s %s %d %d\n", _header, _payload, _payload_len, _mod );
     metadata_tx.start_of_burst = false; // never SOB when continuous
     metadata_tx.end_of_burst   = false; //
@@ -549,11 +559,11 @@ void ofdmtxrx::transmit_packet(unsigned char* _header,
     fgprops.fec0        = _fec0;
     fgprops.fec1        = _fec1;
     ofdmflexframegen_setprops(fg, &fgprops);
-    fprintf(stderr,"transmit_packet4\n");
+    //fprintf(stderr,"transmit_packet4\n");
 
     // assemble frame
     ofdmflexframegen_assemble(fg, _header, _payload, _payload_len);
-    fprintf(stderr,"transmit_packet5\n");
+    //fprintf(stderr,"transmit_packet5\n");
 
     // generate a single OFDM frame
     bool last_symbol=false;
@@ -572,24 +582,22 @@ void ofdmtxrx::transmit_packet(unsigned char* _header,
         tx_stream->send(
             &usrp_buffer.front(), usrp_buffer.size(),
             metadata_tx);
-            fprintf(stderr,"tx_stream->send called\n");
+        //fprintf(stderr,"tx_stream->send called\n");
 
     } // while loop
-    fprintf(stderr,"transmit_packet6\n");
+    //fprintf(stderr,"transmit_packet6\n");
     // send a few extra samples to the device
     // NOTE: this seems necessary to preserve last OFDM symbol in
     //       frame from corruption
 
-    tx_stream->send(
-        &usrp_buffer.front(), usrp_buffer.size(),
-        metadata_tx);
+//    tx_stream->send(
+//        &usrp_buffer.front(), usrp_buffer.size(),
+//        metadata_tx);
 
     // send a mini EOB packet
-    metadata_tx.start_of_burst = false;
-    metadata_tx.end_of_burst   = true;
-
-
-    tx_stream->send("", 0, metadata_tx);
+//    metadata_tx.start_of_burst = false;
+//    metadata_tx.end_of_burst   = true;
+//    tx_stream->send("", 0, metadata_tx);
 
 }
 

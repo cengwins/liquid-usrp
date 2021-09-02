@@ -174,6 +174,16 @@ public:
     //pthread_mutex_t * esbrs_ready_mutex_ptr;
     python_callback_t callback = defaultpythoncallback;
 private:
+
+    unsigned long int DAC_RATE = 64e6;
+	double min_bandwidth = 0.25 * (DAC_RATE / 512.0);
+	double max_bandwidth = 0.25 * (DAC_RATE / 4.0);
+	std::string tx_subdev = "A:B"; // For selecting a specific TX front-end on USRP, check UHD documentation
+	std::string tx_ant = "TX2";	// For selecting a specific TX antenna on USRP, check UHD documentation
+	std::string rx_subdev = "A:A";	// For selecting a specific RX front-end on USRP, check UHD documentation
+	std::string rx_ant = "TX/RX";	// For selecting a specific RX antenna on USRP, check UHD documentation
+	std::string cpu_format = "fc32";	// for I/Q samples: specific cpu format (default "fc32")
+	std::string otw_format = "sc16";	// for I/Q samples: specific "over the wire" format (default "sc16")
     // set timespec for timeout
     //  _ts         :   pointer to timespec structure
     //  _timeout    :   time before timeout
@@ -206,6 +216,8 @@ private:
     uhd::usrp::multi_usrp::sptr usrp_tx;
     uhd::usrp::multi_usrp::sptr usrp_rx;
     uhd::tx_metadata_t          metadata_tx;
+    uhd::tx_streamer::sptr tx_stream;
+	uhd::rx_streamer::sptr rx_stream;
 };
 
 #if 0

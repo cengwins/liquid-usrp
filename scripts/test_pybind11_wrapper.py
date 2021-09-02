@@ -1,8 +1,9 @@
 import sys
-sys.path.append('/Users/eronur/Documents/GitHub/liquid-usrp')
+sys.path.append('/Users/eonur/Documents/GitHub/liquid-usrp')
+sys.path.append('/usr/local/lib')
+
 
 import pybind11_wrapper
-from typing import *
 
 def mycallback(header:str,headervalid:int,payload:str,payloadlen:int,payloadvalid:int):
     print("mycallback", header, headervalid, payload, payloadlen, payloadvalid)

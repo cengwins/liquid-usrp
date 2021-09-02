@@ -99,7 +99,20 @@ ofdmtxrx::ofdmtxrx(unsigned int       _M,
     // TODO: create buffer
     fprintf(stderr,"error3\n");
     // create usrp objects
-    uhd::device_addr_t dev_addr;
+    uhd::device_addrs_t dev_addrs;
+    uhd::device_addr_t hint;
+    hint["serial"]="30E623A";
+    int dev_id = 0;
+    dev_addrs = uhd::device::find(hint);
+    if (dev_addrs.empty())
+			{
+				fprintf(stderr, "Could not find any devices  ");
+			}
+
+    uhd::device_addr_t dev_addr = dev_addrs.at(dev_id);
+    fprintf(stderr, "Using %s with serial %s for TX and RX\n",  dev_addrs.at(dev_id).get("name", "").c_str(), dev_addrs.at(dev_id).get("serial", "").c_str());
+
+
     try{
         usrp_tx = uhd::usrp::multi_usrp::make(dev_addr);
         usrp_rx = uhd::usrp::multi_usrp::make(dev_addr);
@@ -107,6 +120,10 @@ ofdmtxrx::ofdmtxrx(unsigned int       _M,
     catch (...) {
         // Block of code to handle errors
     }
+
+    usrp_tx->set_tx_subdev_spec(tx_subdev);
+    usrp->set_tx_antenna(tx_ant);
+
     fprintf(stderr,"error4\n");
     // initialize default tx values
     set_tx_freq(462.0e6f);
@@ -455,7 +472,7 @@ void ofdmtxrx::transmit_packet(unsigned char* _header,
                                int             _fec0,
                                int             _fec1)
 {
-    fprintf(stderr,"transmit_packet1\n");
+    fprintf(stderr,"transmit_packet1 %s\n", _header);
     metadata_tx.start_of_burst = false; // never SOB when continuous
     metadata_tx.end_of_burst   = false; // 
     metadata_tx.has_time_spec  = false; // set to false to send immediately

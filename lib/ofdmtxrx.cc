@@ -42,6 +42,17 @@
 #   define dprintf(s) /* s */
 #endif
 
+int defaultpythoncallback(
+             std::string  _header,
+             int32_t      _header_valid,
+             std::string  _payload,
+             int32_t     _payload_len,
+             int32_t     _payload_valid)
+{
+    fprintf(stderr,"Callback:defaultpythoncallback called...");
+    return 0;
+}
+
 
 int defaultcallback(unsigned char *  _header,
              int              _header_valid,
@@ -52,15 +63,31 @@ int defaultcallback(unsigned char *  _header,
              void *           _userdata)
 {
     ofdmtxrx* mycls = (ofdmtxrx*)_userdata;
-    mycls->callback((char *)_header, _header_valid, (char *)_payload, _payload_len, _payload_valid);
+    if (mycls == NULL)
+    {
+        fprintf(stderr,"ofdmtxrx class null\n");
+    }
+    if (_header == NULL) return 0;
+    if (_payload == NULL) return 0;
+    std::string header( reinterpret_cast< char const* >(_header) ) ;
+    std::string payload( reinterpret_cast< char const* >(_payload) ) ;
+    int header_valid = _header_valid;
+    if (_header_valid == NULL ) header_valid=0;
+    int payload_valid = _payload_valid;
+    if (_payload_valid == NULL) payload_valid = 0;
+    int payload_len = _payload_len;
+    if (_payload_len == NULL) payload_len = 0;
+    fprintf(stderr,"defaultcallback %s, %d, %s, %d, %d\n", header.c_str(), header_valid, payload.c_str(), payload_len, payload_valid);
+    mycls->callback( header, header_valid, payload, payload_len, payload_valid);
 }
+
 
 
 ofdmtxrx::ofdmtxrx(unsigned int       _M,
                    unsigned int       _cp_len,
-                   unsigned int       _taper_len)
+                   unsigned int       _taper_len,
+                   std::string        _hint)
 {
-
 
     // validate input
     if (_M < 8) {
@@ -97,44 +124,69 @@ ofdmtxrx::ofdmtxrx(unsigned int       _M,
     // create frame synchronizer
     fs = ofdmflexframesync_create(M, cp_len, taper_len, NULL, defaultcallback, this);
     // TODO: create buffer
-    fprintf(stderr,"error3\n");
+    fprintf(stderr,"error3 %s\n", _hint.c_str());
     // create usrp objects
     uhd::device_addrs_t dev_addrs;
+
     uhd::device_addr_t hint;
-    hint["serial"]="30E623A";
+    hint["serial"]= _hint;
+
     int dev_id = 0;
+
+
     dev_addrs = uhd::device::find(hint);
     if (dev_addrs.empty())
 			{
-				fprintf(stderr, "Could not find any devices  ");
+				fprintf(stderr, "Could not find any tx/rx devices  ");
 			}
 
     uhd::device_addr_t dev_addr = dev_addrs.at(dev_id);
-    fprintf(stderr, "Using %s with serial %s for TX and RX\n",  dev_addrs.at(dev_id).get("name", "").c_str(), dev_addrs.at(dev_id).get("serial", "").c_str());
+    fprintf(stderr, "Using %s with serial %s for TX/RX\n",  dev_addrs.at(dev_id).get("name", "").c_str(), dev_addrs.at(dev_id).get("serial", "").c_str());
 
 
     try{
-        usrp_tx = uhd::usrp::multi_usrp::make(dev_addr);
-        usrp_rx = uhd::usrp::multi_usrp::make(dev_addr);
+        usrp = uhd::usrp::multi_usrp::make(dev_addr);
+        //usrp_rx = uhd::usrp::multi_usrp::make(dev_addr);
     }
     catch (...) {
         // Block of code to handle errors
     }
 
-    usrp_tx->set_tx_subdev_spec(tx_subdev);
+    usrp->set_tx_subdev_spec(tx_subdev);
     usrp->set_tx_antenna(tx_ant);
+    usrp->set_rx_subdev_spec(rx_subdev);
+    usrp->set_rx_antenna(rx_ant);
+
+
+	uhd::stream_args_t stream_args(cpu_format, otw_format); //EON
+	tx_stream = usrp->get_tx_stream(stream_args);
+	rx_stream = usrp->get_rx_stream(stream_args);
+
+    tx_rate = 4.0 * bandwidth;
+	unsigned int interp_rate = (unsigned int) (DAC_RATE / tx_rate);
+	interp_rate = (interp_rate >> 2) << 2;
+	while (interp_rate == 240 || interp_rate == 244)
+		interp_rate -= 4;
+	usrp_tx_rate = DAC_RATE / (double) interp_rate;
+	usrp_rx_rate = usrp_tx_rate;
+	//double resamp_rate = usrp_tx_rate / tx_rate;
+	rx_rate = tx_rate;
+
 
     fprintf(stderr,"error4\n");
     // initialize default tx values
-    set_tx_freq(462.0e6f);
-    set_tx_rate(500e3);
-    set_tx_gain_soft(-12.0f);
-    set_tx_gain_uhd(40.0f);
+    set_tx_freq(frequency);
+    set_tx_rate(usrp_tx_rate);
+    set_tx_gain_soft(sw_tx_gain);
+    set_tx_gain_uhd(hw_tx_gain);
+    usrp->set_tx_bandwidth(bandwidth); // write a local function
 
     // initialize default rx values
-    set_rx_freq(462.0e6f);
-    set_rx_rate(500e3);
-    set_rx_gain_uhd(20.0f);
+    set_rx_freq(frequency);
+    set_rx_rate(usrp_rx_rate);
+    set_rx_gain_uhd(hw_rx_gain);
+    usrp->set_rx_bandwidth(bandwidth); // write a local function
+
     fprintf(stderr,"error5\n");
     // reset transceiver
     reset_tx();
@@ -148,6 +200,7 @@ ofdmtxrx::ofdmtxrx(unsigned int       _M,
     pthread_cond_init(&rx_cond,   NULL);    // receiver condition
     pthread_create(&rx_process,   NULL, ofdmtxrx_rx_worker, (void*)this);
     fprintf(stderr,"error7\n");
+
 }
 // default constructor
 //  _M              :   OFDM: number of subcarriers
@@ -381,28 +434,28 @@ void ofdmtxrx::try_callback(int i)
 // set transmitter frequency
 void ofdmtxrx::set_tx_freq(float _tx_freq)
 {
-    if (usrp_tx != NULL)
+    if (usrp != NULL)
     {
-        usrp_tx->set_tx_freq(_tx_freq);
-        fprintf(stderr,"tx_freq=&f\n",_tx_freq);
+        usrp->set_tx_freq(_tx_freq);
+        fprintf(stderr,"tx_freq=%f\n",_tx_freq);
     }
     else
     {
-       fprintf(stderr,"USRP_RX is NULL  tx_freq=%f\n",_tx_freq);
+       fprintf(stderr,"USRP is NULL  tx_freq=%f\n",_tx_freq);
     }
 }
 
 // set transmitter sample rate
 void ofdmtxrx::set_tx_rate(float _tx_rate)
 {
-    if (usrp_tx != NULL)
+    if (usrp != NULL)
     {
-        usrp_tx->set_tx_rate(_tx_rate);
+        usrp->set_tx_rate(_tx_rate);
         fprintf(stderr,"tx_rate=%f\n", _tx_rate);
     }
     else
     {
-       fprintf(stderr,"USRP_RX is NULL  tx_rate=%f\n", _tx_rate);
+       fprintf(stderr,"USRP is NULL  tx_rate=%f\n", _tx_rate);
     }
 
 }
@@ -418,26 +471,26 @@ void ofdmtxrx::set_tx_gain_soft(float _tx_gain_soft)
 // set transmitter hardware (UHD) gain
 void ofdmtxrx::set_tx_gain_uhd(float _tx_gain_uhd)
 {
-    if (usrp_tx != NULL)
+    if (usrp != NULL)
     {
-        usrp_tx->set_tx_gain(_tx_gain_uhd);
+        usrp->set_tx_gain(_tx_gain_uhd);
     }
     else
     {
-       fprintf(stderr,"USRP_RX is NULL _tx_gain_uhd=%f\n", _tx_gain_uhd);
+       fprintf(stderr,"USRP is NULL _tx_gain_uhd=%f\n", _tx_gain_uhd);
     }
 }
 
 // set transmitter antenna
 void ofdmtxrx::set_tx_antenna(char * _tx_antenna)
 {
-    if (usrp_rx != NULL)
+    if (usrp != NULL)
     {
-        usrp_rx->set_tx_antenna(_tx_antenna);
+        usrp->set_tx_antenna(_tx_antenna);
     }
     else
     {
-       dprintf("USRP_RX is NULL...\n");
+       dprintf("USRP is NULL...\n");
     }
 }
 
@@ -473,12 +526,12 @@ void ofdmtxrx::transmit_packet(unsigned char* _header,
                                int             _fec1)
 {
     fprintf(stderr,"transmit_packet1 %s\n", _header);
-    metadata_tx.start_of_burst = false; // never SOB when continuous
-    metadata_tx.end_of_burst   = false; // 
+    //metadata_tx.start_of_burst = false; // never SOB when continuous
+    //metadata_tx.end_of_burst   = false; //
     metadata_tx.has_time_spec  = false; // set to false to send immediately
     //TODO: flush buffers
     fprintf(stderr,"transmit_packet2\n");
-    uhd::stream_args_t stream_args("fc32","sc16"); //complex floats
+    uhd::stream_args_t stream_args(cpu_format,otw_format); //complex floats
     // vector buffer to send data to device
     std::vector<std::complex<float> > usrp_buffer(fgbuffer_len);
     fprintf(stderr,"transmit_packet3\n");
@@ -507,28 +560,29 @@ void ofdmtxrx::transmit_packet(unsigned char* _header,
             usrp_buffer[i] = fgbuffer[i] * tx_gain;
 
         // send samples to the device
-        if (usrp_tx != NULL) {
-        usrp_tx->get_device()->get_tx_stream(stream_args)->send(
+
+        tx_stream->send(
             &usrp_buffer.front(), usrp_buffer.size(),
             metadata_tx);
-        }
+            fprintf(stderr,"tx_stream->send called\n");
+
     } // while loop
     fprintf(stderr,"transmit_packet6\n");
     // send a few extra samples to the device
     // NOTE: this seems necessary to preserve last OFDM symbol in
     //       frame from corruption
-    if (usrp_tx != NULL) {
-        usrp_tx->get_device()->get_tx_stream(stream_args)->send(
+
+    tx_stream->send(
         &usrp_buffer.front(), usrp_buffer.size(),
         metadata_tx);
-    }
-    // send a mini EOB packet
-    metadata_tx.start_of_burst = false;
-    metadata_tx.end_of_burst   = true;
 
-     if (usrp_tx != NULL) {
-        usrp_tx->get_device()->get_tx_stream(stream_args)->send("", 0, metadata_tx);
-       }
+    // send a mini EOB packet
+    //metadata_tx.start_of_burst = false;
+    //metadata_tx.end_of_burst   = true;
+
+
+    tx_stream->send("", 0, metadata_tx);
+    
 }
 
 // Assemble the frame so it is ready to be written as samples
@@ -577,7 +631,7 @@ void ofdmtxrx::transmit_symbol()
             usrp_buffer[i] = fgbuffer[i] * tx_gain;
 
         // send samples to the device
-        usrp_tx->get_device()->get_tx_stream(stream_args)->send(
+        tx_stream->send(
             &usrp_buffer.front(), usrp_buffer.size(),
             metadata_tx);
 
@@ -598,7 +652,7 @@ void ofdmtxrx::end_transmit_frame()
     // send a few extra samples to the device
     // NOTE: this seems necessary to preserve last OFDM symbol in
     //       frame from corruption
-    usrp_tx->get_device()->get_tx_stream(stream_args)->send(
+    tx_stream->send(
         &usrp_buffer.front(), usrp_buffer.size(),
         metadata_tx);
     
@@ -606,7 +660,7 @@ void ofdmtxrx::end_transmit_frame()
     metadata_tx.start_of_burst = false;
     metadata_tx.end_of_burst   = true;
 
-    usrp_tx->get_device()->get_tx_stream(stream_args)->send("", 0, metadata_tx);
+    tx_stream->send("", 0, metadata_tx);
 
 }
 
@@ -617,52 +671,52 @@ void ofdmtxrx::end_transmit_frame()
 // set receiver frequency
 void ofdmtxrx::set_rx_freq(float _rx_freq)
 {
-    if (usrp_rx != NULL)
+    if (usrp != NULL)
     {
-        usrp_rx->set_rx_freq(_rx_freq);
+        usrp->set_rx_freq(_rx_freq);
     }
     else
     {
-       dprintf("USRP_RX is NULL...\n");
+       dprintf("USRP is NULL...\n");
     }
 }
 
 // set receiver sample rate
 void ofdmtxrx::set_rx_rate(float _rx_rate)
 {
-    if (usrp_rx != NULL)
+    if (usrp != NULL)
     {
-        usrp_rx->set_rx_rate(_rx_rate);
+        usrp->set_rx_rate(_rx_rate);
     }
     else
     {
-       dprintf("USRP_RX is NULL...\n");
+       dprintf("USRP is NULL...\n");
     }
 }
 
 // set receiver hardware (UHD) gain
 void ofdmtxrx::set_rx_gain_uhd(float _rx_gain_uhd)
 {
-    if (usrp_rx != NULL)
+    if (usrp != NULL)
     {
-        usrp_rx->set_rx_gain(_rx_gain_uhd);
+        usrp->set_rx_gain(_rx_gain_uhd);
     }
     else
     {
-       dprintf("USRP_RX is NULL...\n");
+       dprintf("USRP is NULL...\n");
     }
 }
 
 // set receiver antenna
 void ofdmtxrx::set_rx_antenna(char * _rx_antenna)
 {
-    if (usrp_rx != NULL)
+    if (usrp != NULL)
     {
-        usrp_rx->set_rx_antenna(_rx_antenna);
+        usrp->set_rx_antenna(_rx_antenna);
     }
     else
     {
-       dprintf("USRP_RX is NULL...\n");
+       dprintf("USRP is NULL...\n");
     }
 }
 
@@ -675,20 +729,30 @@ void ofdmtxrx::reset_rx()
 // start receiver
 void ofdmtxrx::start_rx()
 {
-    dprintf("usrp rx start\n");
+    fprintf(stderr, "usrp rx start\n");
     // set rx running flag
     rx_running = true;
 
+
+
+
     // tell device to start
-    if (usrp_rx != NULL)
+    if (usrp != NULL)
     {
-        usrp_rx->issue_stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
+
+        uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
+        stream_cmd.num_samps = max_samps_per_packet;
+		//stream_cmd.stream_now = true;
+        rx_stream->issue_stream_cmd(stream_cmd); //tells all channels to stream
+//        usrp_rx->issue_stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
+        fprintf(stderr,"uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS\n");
     }
     else
     {
-       dprintf("USRP_RX is NULL...\n");
+        fprintf(stderr,"USRP is NULL...\n");
     }
-    // signal condition (tell rx worker to start)
+//    // signal condition (tell rx worker to start)
+
     pthread_cond_signal(&rx_cond);
 }
 
@@ -699,14 +763,15 @@ void ofdmtxrx::stop_rx()
     // set rx running flag
     rx_running = false;
 
+
     // tell device to stop
-    if (usrp_rx != NULL)
+    if (usrp != NULL)
     {
-        usrp_rx->issue_stream_cmd(uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS);
+        rx_stream->issue_stream_cmd(uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS);
     }
     else
     {
-       dprintf("USRP_RX is NULL...\n");
+       dprintf("USRP is NULL...\n");
     }
 }
 
@@ -758,17 +823,18 @@ void * ofdmtxrx_rx_worker(void * _arg)
 {
     //return NULL;
     // type cast input argument as ofdmtxrx object
+    fprintf(stderr,"rx_worker processing samples...1\n");
     fprintf(stderr,"ofdmtxrx_rx_worker error1\n");
     ofdmtxrx * txcvr = (ofdmtxrx*) _arg;
-    uhd::stream_args_t stream_args("fc32", "sc16");
-    size_t max_samps_per_packet;
+    uhd::stream_args_t stream_args(txcvr->cpu_format, txcvr->otw_format);
+
     // set up receive buffer
-    if (txcvr->usrp_rx != NULL)
+    if (txcvr->usrp != NULL)
     {
-        max_samps_per_packet = txcvr->usrp_rx->get_device()->get_rx_stream(stream_args)->get_max_num_samps();
+        txcvr->max_samps_per_packet = txcvr->tx_stream->get_max_num_samps();
     }
-    std::vector<std::complex<float> > buffer(max_samps_per_packet);
-        stream_args.args["spp"] = max_samps_per_packet;
+    std::vector<std::complex<float> > buffer(txcvr->max_samps_per_packet);
+    stream_args.args["spp"] = txcvr->max_samps_per_packet;
     // receiver metadata object
     uhd::rx_metadata_t md;
     fprintf(stderr,"ofdmtxrx_rx_worker error2\n");
@@ -800,11 +866,11 @@ void * ofdmtxrx_rx_worker(void * _arg)
             // grab data from device
             //dprintf("rx_worker waiting for samples...\n");
             size_t num_rx_samps;
-            if (txcvr->usrp_rx != NULL )
+            if (txcvr->usrp != NULL )
             {
-                num_rx_samps = txcvr->usrp_rx->get_device()->get_rx_stream(stream_args)->recv(
+                num_rx_samps = txcvr->rx_stream->recv(
                 &buffer.front(), buffer.size(), md);
-            //dprintf("rx_worker processing samples...\n");
+            //fprintf(stderr,"rx_worker processing samples...\n");
             }
             // ignore error codes for now
 #if 0
@@ -854,9 +920,9 @@ void * ofdmtxrx_rx_worker_blocking(void * _arg)
     ofdmtxrx * txcvr = (ofdmtxrx*) _arg;
     uhd::stream_args_t stream_args("fc32", "sc16");
     // set up receive buffer
-    const size_t max_samps_per_packet = txcvr->usrp_rx->get_device()->get_rx_stream(stream_args)->get_max_num_samps();
-    std::vector<std::complex<float> > _buffer(max_samps_per_packet);
-    stream_args.args["spp"] = max_samps_per_packet;
+    txcvr->max_samps_per_packet = txcvr->rx_stream->get_max_num_samps();
+    std::vector<std::complex<float> > _buffer(txcvr->max_samps_per_packet);
+    stream_args.args["spp"] = txcvr->max_samps_per_packet;
     //std::vector<std::complex<float> > * rx_buffer = &_buffer;
     txcvr->rx_buffer = &_buffer;
 
@@ -892,7 +958,7 @@ void * ofdmtxrx_rx_worker_blocking(void * _arg)
             //dprintf("rx_worker waiting for samples...\n");
             dprintf("rx_worker locking buffer mutex\n");
             pthread_mutex_lock(&(txcvr->rx_buffer_mutex));
-            size_t num_rx_samps = txcvr->usrp_rx->get_device()->get_rx_stream(stream_args)->recv(
+            size_t num_rx_samps = txcvr->rx_stream->recv(
                 &(txcvr->rx_buffer->front()), txcvr->rx_buffer->size(), md
                 //&rx_buffer.front(), rx_buffer.size(), md,
             );

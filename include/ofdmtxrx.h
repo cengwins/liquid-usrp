@@ -44,16 +44,12 @@ void * ofdmtxrx_rx_worker_blocking(void * _arg);
 typedef std::function<int( std::string, int32_t,  std::string, int32_t, int32_t)> python_callback_t;
 
 
-static int defaultpythoncallback(
+int defaultpythoncallback(
              std::string  _header,
              int32_t      _header_valid,
              std::string  _payload,
              int32_t     _payload_len,
-             int32_t     _payload_valid)
-{
-    fprintf(stderr,"Callback:defaultpythoncallback called...");
-    return 0;
-}
+             int32_t     _payload_valid);
 
 class ofdmtxrx {
 public:
@@ -79,7 +75,8 @@ public:
 
     ofdmtxrx(unsigned int       _M,
                    unsigned int       _cp_len,
-                   unsigned int       _taper_len);
+                   unsigned int       _taper_len,
+                   std::string        _hint);
     // custom constructor that allows selection between 
     // original ofdmtxrx_rx_worker() and ofdmtxrx_rx_worker_blocking()
     ofdmtxrx(unsigned int       _M,
@@ -173,7 +170,7 @@ public:
     //int * esbrs_ready_ptr;
     //pthread_mutex_t * esbrs_ready_mutex_ptr;
     python_callback_t callback = defaultpythoncallback;
-private:
+
 
     unsigned long int DAC_RATE = 64e6;
 	double min_bandwidth = 0.25 * (DAC_RATE / 512.0);
@@ -184,6 +181,17 @@ private:
 	std::string rx_ant = "TX/RX";	// For selecting a specific RX antenna on USRP, check UHD documentation
 	std::string cpu_format = "fc32";	// for I/Q samples: specific cpu format (default "fc32")
 	std::string otw_format = "sc16";	// for I/Q samples: specific "over the wire" format (default "sc16")
+    float frequency = 462.0e6;
+	float bandwidth = 250e3f;
+	double hw_tx_gain = 70.0; 		// hardware tx antenna gain
+	double sw_tx_gain = -12.0f; // for adapting the transmit power default -12.0f
+	double hw_rx_gain = 20.0; 		// hardware rx antenna gain
+    double tx_rate;
+	double rx_rate;
+	double usrp_tx_rate;
+	double usrp_rx_rate;
+	size_t max_samps_per_packet;
+private:
     // set timespec for timeout
     //  _ts         :   pointer to timespec structure
     //  _timeout    :   time before timeout
@@ -213,6 +221,7 @@ private:
     bool debug_enabled;             // is debugging enabled?
 
     // RF objects and properties
+    uhd::usrp::multi_usrp::sptr usrp;
     uhd::usrp::multi_usrp::sptr usrp_tx;
     uhd::usrp::multi_usrp::sptr usrp_rx;
     uhd::tx_metadata_t          metadata_tx;

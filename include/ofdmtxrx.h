@@ -41,7 +41,7 @@ void * ofdmtxrx_rx_worker(void * _arg);
 // sent to the synchronizer.    
 void * ofdmtxrx_rx_worker_blocking(void * _arg);
 
-typedef std::function<int( std::string, int32_t,  std::string, int32_t, int32_t, float, float)> python_callback_t;
+typedef std::function<int(  char *, int32_t,   char *, int32_t, int32_t, float, float)> python_callback_t;
 
 
 class ofdmtxrx {

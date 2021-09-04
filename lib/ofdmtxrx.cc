@@ -63,7 +63,7 @@ int defaultcallback(unsigned char *  _header,
         return 0;
     }
     {
-        fprintf(stderr,"defaultcallback _header = %s\n", _header);
+        fprintf(stderr,"defaultcallback _header = %s\n", (char *)_header);
     }
     if (_payload == NULL) {
         fprintf(stderr,"defaultcallback _payload is null\n");
@@ -73,8 +73,8 @@ int defaultcallback(unsigned char *  _header,
         if (_payload_valid==1)
         {
 
-                std::string header( reinterpret_cast<char const * >(&_header[0]) ) ;
-                std::string payload( reinterpret_cast<char const * >(&_payload[0]),_payload_len ) ;
+                //std::string header( reinterpret_cast<char const * >(&_header[0]) ) ;
+                //std::string payload( reinterpret_cast<char const * >(&_payload[0]),_payload_len ) ;
                 int header_valid = _header_valid;
                 if (_header_valid == NULL ) header_valid=0;
                 int payload_valid = _payload_valid;
@@ -83,7 +83,7 @@ int defaultcallback(unsigned char *  _header,
                 if (_payload_len == NULL) payload_len = 0;
                 try
                 {
-                    mycls->callback( header, header_valid, payload, payload_len, payload_valid, _stats.rssi, _stats.evm);
+                    mycls->callback( (char *)_header, header_valid, (char *)_payload, payload_len, payload_valid, _stats.rssi, _stats.evm);
                 }
                 catch(int e)
                 {
@@ -590,14 +590,14 @@ void ofdmtxrx::transmit_packet(unsigned char* _header,
     // NOTE: this seems necessary to preserve last OFDM symbol in
     //       frame from corruption
 
-//    tx_stream->send(
-//        &usrp_buffer.front(), usrp_buffer.size(),
-//        metadata_tx);
+    tx_stream->send(
+        &usrp_buffer.front(), usrp_buffer.size(),
+        metadata_tx);
 
     // send a mini EOB packet
-//    metadata_tx.start_of_burst = false;
-//    metadata_tx.end_of_burst   = true;
-//    tx_stream->send("", 0, metadata_tx);
+    metadata_tx.start_of_burst = false;
+    metadata_tx.end_of_burst   = true;
+    tx_stream->send("", 0, metadata_tx);
 
 }
 

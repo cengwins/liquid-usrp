@@ -11,10 +11,10 @@ namespace py = pybind11;
 using namespace pybind11::literals;
 
 
-PYBIND11_PLUGIN(pybind11_wrapper) {
-    py::module m("pybind11_wrapper", "pybind11 liquid_usrp wrapper for python");
+PYBIND11_PLUGIN(liquid_usrp_pybind11_wrapper) {
+    py::module m("liquid_usrp_pybind11_wrapper", "pybind11 liquid_usrp wrapper for python");
     py::class_<ofdmtxrx>(m, "ofdmtxrx")
-        .def(py::init<uint,uint,uint,std::string>())
+        .def(py::init<const py::object&,uint,uint,uint,std::string>())
         .def("set_callback", &ofdmtxrx::set_callback)
         .def("try_callback", &ofdmtxrx::try_callback)
         .def("set_tx_freq", &ofdmtxrx::set_tx_freq)

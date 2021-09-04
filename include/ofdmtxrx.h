@@ -31,6 +31,9 @@
 #include <liquid/liquid.h>
 #include <uhd/usrp/multi_usrp.hpp>
 #include <functional>
+#include <pybind11/pybind11.h>
+namespace py = pybind11;
+
 // receiver worker thread
 void * ofdmtxrx_rx_worker(void * _arg);
 
@@ -41,7 +44,7 @@ void * ofdmtxrx_rx_worker(void * _arg);
 // sent to the synchronizer.    
 void * ofdmtxrx_rx_worker_blocking(void * _arg);
 
-typedef std::function<int(  char *, int32_t,   char *, int32_t, int32_t, float, float)> python_callback_t;
+typedef std::function<int(  py::bytes, int32_t,   py::bytes, int32_t, int32_t, float, float)> python_callback_t;
 
 
 class ofdmtxrx {
@@ -66,7 +69,8 @@ public:
 //             unsigned int       _taper_len);
 
 
-    ofdmtxrx(unsigned int       _M,
+    ofdmtxrx(      const py::object& object,
+                   unsigned int       _M,
                    unsigned int       _cp_len,
                    unsigned int       _taper_len,
                    std::string        _hint);

@@ -30,6 +30,7 @@
 #include <sys/time.h>
 #include <complex>
 #include <liquid/liquid.h>
+#include <string.h>
 
 #include "ofdmtxrx.h"
 
@@ -58,18 +59,19 @@ int defaultcallback(unsigned char *  _header,
     {
         fprintf(stderr,"ofdmtxrx class null\n");
     }
-    if (_header == NULL) {
-        fprintf(stderr,"defaultcallback _header is null\n");
-        return 0;
-    }
+    //if (_header == NULL) {
+    //    fprintf(stderr,"defaultcallback _header is null\n");
+    //    return 0;
+    //}
+    //{
+    //    fprintf(stderr,"defaultcallback _header = %s\n", (char *)_header);
+    //}
+    //if (_payload == NULL) {
+    //    fprintf(stderr,"defaultcallback _payload is null\n");
+    //    return 0;
+    //}
+    if (_header_valid==1)
     {
-        fprintf(stderr,"defaultcallback _header = %s\n", (char *)_header);
-    }
-    if (_payload == NULL) {
-        fprintf(stderr,"defaultcallback _payload is null\n");
-        return 0;
-    }
-    if (_header_valid==1){
         if (_payload_valid==1)
         {
 
@@ -83,26 +85,57 @@ int defaultcallback(unsigned char *  _header,
                 if (_payload_len == NULL) payload_len = 0;
                 try
                 {
-                    mycls->callback( (char *)_header, header_valid, (char *)_payload, payload_len, payload_valid, _stats.rssi, _stats.evm);
+                    py::bytes header((const  char *)_header, 8);
+                    py::bytes payload((const  char *)_payload, _payload_len);
+                    mycls->callback( header, header_valid, payload, payload_len, payload_valid, _stats.rssi, _stats.evm);
                 }
-                catch(int e)
-                {
-                    fprintf(stderr,"EXCEPTION defaultcallback\n");
-                }
+                catch (py::error_already_set &e) {
+                        //py::print("EXCEPTION defaultcallback");
+                        fprintf(stderr,"EXCEPTION defaultcallback %s\n", e.what());
+                        //throw;
+                    }
         }
+        else
         {
-            fprintf(stderr,"defaultcallback: payload is in error payload\n");
+            //fprintf(stderr,"defaultcallback: payload is in error payload\n");
+            try
+                {
+                    strcpy((char *)_payload, "");
+                    py::bytes header((const  char *)_header, 8);
+                    py::bytes payload((const  char *)_payload, _payload_len);
+                    mycls->callback( header, _header_valid, payload, 0, _payload_valid, _stats.rssi, _stats.evm);
+                }
+                catch (py::error_already_set &e) {
+                        //py::print("EXCEPTION defaultcallback");
+                        fprintf(stderr,"EXCEPTION defaultcallback\n");
+                        //throw;
+                    }
         }
     }
+    else
     {
-        fprintf(stderr,"defaultcallback: header is in error\n");
+        //fprintf(stderr,"defaultcallback: header is in error\n");
+        try
+                {
+                    strcpy((char *)_header, "");
+                    strcpy((char *)_payload, "");
+                    py::bytes header((const  char *)_header, 8);
+                    py::bytes payload((const  char *)_payload, _payload_len);
+                    mycls->callback( header, _header_valid, payload, 0, _payload_valid, _stats.rssi, _stats.evm);
+                }
+                catch (py::error_already_set &e) {
+                        //py::print("EXCEPTION defaultcallback");
+                        fprintf(stderr,"EXCEPTION defaultcallback\n");
+                        //throw;
+                    }
     }
-
+    return 0;
 }
 
 
 
-ofdmtxrx::ofdmtxrx(unsigned int       _M,
+ofdmtxrx::ofdmtxrx(const py::object& object,
+                   unsigned int       _M,
                    unsigned int       _cp_len,
                    unsigned int       _taper_len,
                    std::string        _hint)
@@ -148,7 +181,7 @@ ofdmtxrx::ofdmtxrx(unsigned int       _M,
     uhd::device_addrs_t dev_addrs;
 
     uhd::device_addr_t hint;
-    hint["serial"]= _hint;
+    hint["name"]= _hint;
 
     int dev_id = 0;
 

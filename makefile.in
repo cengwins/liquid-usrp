@@ -63,11 +63,11 @@ help:
 
 # flags
 #INCLUDE_CFLAGS	= -I./ -I./include/ -I/usr/local/include  $(shell python3-config --cflags) $(shell python3 -m pybind11 --includes)
-INCLUDE_CFLAGS	= -I./ -I./include/ -I/usr/local/include
+INCLUDE_CFLAGS	= -I./ -I./include/ -I/usr/local/include $(shell python3-config --cflags) $(shell python3 -m pybind11 --includes)
 CFLAGS		+= $(INCLUDE_CFLAGS) -g -O2 -Wall -fPIC -w
 CPPFLAGS	+= $(INCLUDE_CFLAGS) -g -O2 -Wall -fPIC -w
 #LDFLAGS		+= @LIBS@ $(shell python3-config --ldflags)
-LDFLAGS		+= @LIBS@
+LDFLAGS		+= @LIBS@  -lpython3.8 $(shell python3-config --ldflags)
 ARFLAGS		= r
 
 # 
@@ -146,7 +146,7 @@ example_src :=				\
 ## TARGET : all - build shared library and examples (default)
 ##
 
-pybind11setup : lib/pybind11_wrapper.cc
+pybind11setup : lib/liquid_usrp_pybind11_wrapper.cc
 	python3 scripts/setup.py build_ext -i
 	python3 scripts/test_pybind11_wrapper.py
 
@@ -187,7 +187,7 @@ libliquidusrp.so: $(library_objs)
 install:
 	@echo "installing..."
 	mkdir -p $(DESTDIR)$(exec_prefix)/lib
-	install -m 644 -p $(SHARED_LIB) libliquidusrp.a $(DESTDIR)$(exec_prefix)/lib
+	install -m 644 -p $(SHARED_LIB) libliquidusrp.a liquid_usrp_pybind11_wrapper.cpython-38-darwin.so $(DESTDIR)$(exec_prefix)/lib
 	mkdir -p $(DESTDIR)$(prefix)/include
 	mkdir -p $(DESTDIR)$(prefix)/include/liquid
 	install -m 644 -p $(addprefix include/,$(headers_install)) $(DESTDIR)$(prefix)/include/liquid
@@ -211,6 +211,7 @@ uninstall:
 	@echo "uninstalling..."
 	$(RM) $(addprefix $(DESTDIR)$(prefix)/include/liquid/, $(headers_install))
 	$(RM) $(DESTDIR)$(exec_prefix)/lib/libliquidusrp.a
+	$(RM) $(DESTDIR)$(exec_prefix)/lib/liquid_usrp_pybind11_wrapper.cpython-38-darwin.so
 	$(RM) $(DESTDIR)$(exec_prefix)/lib/$(SHARED_LIB)
 	@echo "done."
 
@@ -256,5 +257,5 @@ distclean: clean
 	$(RM) configure config.h config.h.in config.h.in~ config.log config.status
 	$(RM) -r autom4te.cache
 	$(RM) makefile
-	$(RM) pybind11_wrapper.so
+	$(RM) liquid_usrp_pybind11_wrapper.so
 	$(RM) configure~

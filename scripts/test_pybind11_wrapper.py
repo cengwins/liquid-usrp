@@ -1,19 +1,23 @@
 import sys
-sys.path.append('/Users/eronur/Documents/GitHub/liquid-usrp')
+#sys.path.append('/Users/eronur/Documents/GitHub/liquid-usrp') #if did not call make install!
+
 sys.path.append('/usr/local/lib')
 
 import time
 
-import pybind11_wrapper
+import liquid_usrp_pybind11_wrapper as wrapper
 
-def mycallback_txcvr1(header:str,headervalid:int,payload:str,payloadlen:int,payloadvalid:int, rssi:float, evm:float):
+class x(object):
+    pass
+
+def mycallback_txcvr1(header:bytes,headervalid:int,payload:bytes,payloadlen:int,payloadvalid:int, rssi:float, evm:float):
     try:
         print("mycallback_txcvr1", header, headervalid, payload, payloadlen, payloadvalid, rssi, evm)
     except Exception as e:
         print("Exception: UnicodeDecodeError {}".format(e))
     return 0
 
-def mycallback_txcvr2(header:str,headervalid:int,payload:str,payloadlen:int,payloadvalid:int, rssi:float, evm:float):
+def mycallback_txcvr2(header:bytes,headervalid:int,payload:bytes,payloadlen:int,payloadvalid:int, rssi:float, evm:float):
     try:
         print("mycallback_txcvr2", header, headervalid, payload, payloadlen, payloadvalid, rssi, evm)
     except Exception as e:
@@ -29,19 +33,21 @@ if __name__ == '__main__':
         num_frames = 2000          # number of frames to transmit
         txgain_dB = -12.0          # software tx gain [dB]
         uhd_txgain = 40.0           # uhd (hardware) tx gain
-        device1 = "30E623A"
-        device2 = "30E6248"
+        #device1 = "30E623A"
+        #device2 = "30E6248"
+        device1 = "winslab_b210_1"
+        device2 = "winslab_b210_2"
         # ofdm properties
         M = 512
         cp_len = 64
         taper_len = 64
 
-        txcvr1 = pybind11_wrapper.ofdmtxrx(M, cp_len, taper_len, device1)
+        txcvr1 = wrapper.ofdmtxrx(x, M, cp_len, taper_len, device1)
         txcvr1.debug_enable()
         txcvr1.set_callback(mycallback_txcvr1)
         txcvr1.start_rx()
 
-        txcvr2 = pybind11_wrapper.ofdmtxrx(M, cp_len, taper_len, device2)
+        txcvr2 = wrapper.ofdmtxrx(x, M, cp_len, taper_len, device2)
         txcvr2.debug_enable()
         txcvr2.set_callback(mycallback_txcvr2)
         txcvr2.start_rx()
@@ -56,9 +62,9 @@ if __name__ == '__main__':
         payload = "mypayload"
         #byte_payload = bytes(payload, 'utf-8')
         payload_len = 9
-        ms = pybind11_wrapper.LIQUID_MODEM_QPSK
-        fec0 = pybind11_wrapper.LIQUID_FEC_NONE # fec(inner)
-        fec1 = pybind11_wrapper.LIQUID_FEC_GOLAY2412 # fec(outer)
+        ms = wrapper.LIQUID_MODEM_QPSK
+        fec0 = wrapper.LIQUID_FEC_NONE # fec(inner)
+        fec1 = wrapper.LIQUID_FEC_GOLAY2412 # fec(outer)
 
         for x in range(20):
             header = "H" + str(x) + "eader"

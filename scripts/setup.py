@@ -1,9 +1,14 @@
 import os, sys
-
+import sysconfig
 from distutils.core import setup, Extension
-from distutils import sysconfig
+
 # '-lliquidusrp',
-cpp_args = ['-w', '-std=c++11', '-g', '$(shell python3-config --cflags)', '$(shell python3 -m pybind11 --includes)']
+cpp_args = ['-w', '-std=c++11', '-g']
+paths=sysconfig.get_paths()
+for key, value in paths.items():
+    aKey = key
+    aValue = value
+    cpp_args.append(aValue)
 link_args = ['-v', '-L.', '-L/usr/local/lib', '-lfec', '-lboost_system', '-lpthread', '-luhd', '-lliquid', '-lm', '-lc']
 ext_modules = [
     Extension(

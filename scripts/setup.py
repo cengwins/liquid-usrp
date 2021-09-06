@@ -3,7 +3,10 @@ import sysconfig
 from distutils.core import setup, Extension
 
 # '-lliquidusrp',
-cpp_args = ['-w', '-std=c++11', '-g']
+if sys.platform == 'darwin':
+    cpp_args = ['-w', '-std=c++11', '-g','-stdlib=libc++', '-mmacosx-version-min=10.7']
+else:
+    cpp_args = ['-w', '-std=c++11', '-g']
 paths=sysconfig.get_paths()
 for key, value in paths.items():
     aKey = key

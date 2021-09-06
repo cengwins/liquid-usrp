@@ -8,11 +8,11 @@ if sys.platform == 'darwin':
 else:
     cpp_args = ['-w', '-std=c++11', '-g', '-I/usr/local/lib/python3.8/dist-packages/pybind11']
 
-paths=sysconfig.get_paths()
-for key, value in paths.items():
-    aKey = key
-    aValue = "-I" + value
-    cpp_args.append(aValue)
+#paths=sysconfig.get_paths()
+#for key, value in paths.items():
+#    aKey = key
+#    aValue = "-I" + value
+#    cpp_args.append(aValue)
     
 link_args = ['-v', '-L.', '-L/usr/local/lib', '-lfec', '-lboost_system', '-lpthread', '-luhd', '-lliquid', '-lm', '-lc']
 

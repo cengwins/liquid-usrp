@@ -14,7 +14,8 @@ else:
 #    aValue = "-I" + value
 #    cpp_args.append(aValue)
     
-link_args = ['-v', '-L.', '-L/usr/local/lib', '-lfec', '-lboost_system', '-lpthread', '-luhd', '-lliquid', '-lm', '-lc']
+#link_args = ['-v', '-L.', '-L/usr/local/lib', '-lfec', '-lboost_system', '-lpthread', '-luhd', '-lliquid', '-lm', '-lc']
+link_args = ['-v', '-L.', '-L/usr/local/lib', '-lboost_system', '-lpthread', '-luhd', '-lliquid', '-lm', '-lc']
 
 
 ext_modules = [

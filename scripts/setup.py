@@ -6,7 +6,8 @@ from distutils.core import setup, Extension
 if sys.platform == 'darwin':
     cpp_args = ['-w', '-std=c++11', '-g','-stdlib=libc++', '-mmacosx-version-min=10.7']
 else:
-    cpp_args = ['-w', '-std=c++11', '-g']
+    cpp_args = ['-w', '-std=c++11', '-g', 'L/usr/local/lib/python3.8/dist-packages/pybind11']
+
 paths=sysconfig.get_paths()
 for key, value in paths.items():
     aKey = key

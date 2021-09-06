@@ -8,8 +8,6 @@ if sys.platform == 'darwin':
 else:
     cpp_args = ['-w', '-std=c++11', '-g']
 
-pythonpath = sysconfig.get_path('purelib')
-
 #paths=sysconfig.get_paths()
 #for key, value in paths.items():
 #    aKey = key

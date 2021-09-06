@@ -187,7 +187,7 @@ libliquidusrp.so: $(library_objs)
 install:
 	@echo "installing..."
 	mkdir -p $(DESTDIR)$(exec_prefix)/lib
-	install -m 644 -p $(SHARED_LIB) libliquidusrp.a liquid_usrp_pybind11_wrapper.cpython-38-darwin.so $(DESTDIR)$(exec_prefix)/lib
+	install -m 644 -p $(SHARED_LIB) libliquidusrp.a liquid_usrp_pybind11_wrapper.*.so $(DESTDIR)$(exec_prefix)/lib
 	mkdir -p $(DESTDIR)$(prefix)/include
 	mkdir -p $(DESTDIR)$(prefix)/include/liquid
 	install -m 644 -p $(addprefix include/,$(headers_install)) $(DESTDIR)$(prefix)/include/liquid
@@ -211,7 +211,7 @@ uninstall:
 	@echo "uninstalling..."
 	$(RM) $(addprefix $(DESTDIR)$(prefix)/include/liquid/, $(headers_install))
 	$(RM) $(DESTDIR)$(exec_prefix)/lib/libliquidusrp.a
-	$(RM) $(DESTDIR)$(exec_prefix)/lib/liquid_usrp_pybind11_wrapper.cpython-38-darwin.so
+	$(RM) $(DESTDIR)$(exec_prefix)/lib/liquid_usrp_pybind11_wrapper.*.so
 	$(RM) $(DESTDIR)$(exec_prefix)/lib/$(SHARED_LIB)
 	@echo "done."
 

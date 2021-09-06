@@ -3,7 +3,7 @@ import os, sys
 from distutils.core import setup, Extension
 from distutils import sysconfig
 # '-lliquidusrp',
-cpp_args = ['-w', '-std=c++11', '-stdlib=libc++', '-mmacosx-version-min=10.7', '-g']
+cpp_args = ['-w', '-std=c++11', '-g']
 link_args = ['-v', '-L.', '-L/usr/local/lib', '-lfec', '-lboost_system', '-lpthread', '-luhd', '-lliquid', '-lm', '-lc']
 ext_modules = [
     Extension(
